@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './index.css';
 
 // ── Gem SVG mark ──────────────────────────────────────────────
@@ -249,7 +249,7 @@ const Starfield = () => {
 };
 
 // ── Mock UI Components (Interactive) ──────────────────────────
-import { useState } from 'react';
+
 
 const GEM_ITEMS = [
   {
@@ -561,7 +561,112 @@ const MarketUI = () => {
   );
 };
 
-// ── Nav ────────────────────────────────────────────────────────
+// ── FAB Icon SVGs ──────────────────────────────────────────────
+const SunIcon = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="12" r="4"/>
+    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+      stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+  </svg>
+);
+const MoonIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+  </svg>
+);
+const InvertIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="12" cy="12" r="9"/>
+    <path d="M12 3v18"/>
+    <path d="M12 3a9 9 0 010 18" fill="currentColor" stroke="none"/>
+  </svg>
+);
+const ChevronUpIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <path d="M18 15l-6-6-6 6"/>
+  </svg>
+);
+
+// ── Floating Action Buttons ───────────────────────────────────
+const THEMES = ['light', 'dark', 'invert'];
+
+const FloatingButtons = ({ theme, setTheme }) => {
+  const [scrollPct, setScrollPct] = useState(0);
+  const [showTop, setShowTop] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const docH = document.documentElement.scrollHeight - window.innerHeight;
+      const pct  = docH > 0 ? window.scrollY / docH : 0;
+      setScrollPct(pct);
+      setShowTop(pct > 0.15);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const cycleTheme = () => {
+    setTheme(t => THEMES[(THEMES.indexOf(t) + 1) % THEMES.length]);
+  };
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Button colours adapt: light bg → dark FAB; dark/invert bg → light FAB
+  const fabBg    = theme === 'light' ? '#0d0d0d' : '#f0f2f5';
+  const fabColor = theme === 'light' ? '#f0f2f5' : '#0d0d0d';
+  const fabShadow = theme === 'light'
+    ? '0 4px 24px rgba(0,0,0,0.22)'
+    : '0 4px 24px rgba(0,0,0,0.55)';
+
+  const fabBase = {
+    position: 'fixed', width: 48, height: 48, borderRadius: '50%',
+    background: fabBg, color: fabColor,
+    border: 'none', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 9999, boxShadow: fabShadow,
+    transition: 'all 0.25s cubic-bezier(0.2,0,0,1)',
+    outline: 'none',
+  };
+
+  const THEME_LABEL = { light: 'Dark mode', dark: 'Invert mode', invert: 'Light mode' };
+
+  return (
+    <>
+      {/* Theme toggle — bottom left */}
+      <button
+        id="fab-theme"
+        onClick={cycleTheme}
+        title={THEME_LABEL[theme]}
+        style={{ ...fabBase, bottom: 24, left: 24 }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.06)'; e.currentTarget.style.boxShadow = fabShadow.replace('0.22','0.35'); }}
+        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = fabShadow; }}
+      >
+        {theme === 'light'  && <SunIcon />}
+        {theme === 'dark'   && <MoonIcon />}
+        {theme === 'invert' && <InvertIcon />}
+      </button>
+
+      {/* Scroll to top — bottom right */}
+      <button
+        id="fab-top"
+        onClick={scrollToTop}
+        title="Back to top"
+        style={{
+          ...fabBase, bottom: 24, right: 24,
+          opacity: showTop ? 1 : 0,
+          pointerEvents: showTop ? 'auto' : 'none',
+          transform: showTop ? 'translateY(0)' : 'translateY(10px)',
+        }}
+        onMouseEnter={e => { if (showTop) { e.currentTarget.style.transform = 'translateY(-2px) scale(1.06)'; }}}
+        onMouseLeave={e => { if (showTop) { e.currentTarget.style.transform = 'translateY(0)'; }}}
+      >
+        <ChevronUpIcon />
+      </button>
+    </>
+  );
+};
+
+// ── Nav ─────────────────────────────────────────────────────────────────────────
 const Nav = () => {
   const navRef = useRef(null);
   useEffect(() => {
@@ -612,10 +717,20 @@ const useFadeIn = () => {
 // ── App ────────────────────────────────────────────────────────
 export default function App() {
   useFadeIn();
+  const [theme, setTheme] = useState('light');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   return (
     <>
+      {/* Cursor effects + FABs — outside the invertable zone */}
       <CursorDotField />
+      <FloatingButtons theme={theme} setTheme={setTheme} />
+
+      {/* All page content — CSS inverts this in 'invert' theme */}
+      <div id="page-content">
       <Nav />
 
       {/* ── HERO ── */}
@@ -966,6 +1081,7 @@ export default function App() {
           </div>
         </div>
       </footer>
+      </div>{/* end #page-content */}
     </>
   );
 }

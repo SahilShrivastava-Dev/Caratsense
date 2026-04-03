@@ -1368,3 +1368,132 @@ canvas.particles-canvas {
 .feature-preview.dark:hover {
   box-shadow: 0 8px 40px rgba(0,0,0,0.4);
 }
+
+/* =================== DARK THEME =================== */
+[data-theme="dark"] {
+  --bg-primary:    #0f0f12;
+  --bg-secondary:  #1a1a20;
+  --bg-dark:       #000000;
+  --bg-card-dark:  #0a0a0e;
+  --text-primary:  #f0f2f5;
+  --text-secondary:#8a9099;
+  --text-light:    #ffffff;
+  --border-light:  rgba(255,255,255,0.07);
+  --border-dark:   rgba(255,255,255,0.14);
+}
+
+/* Nav */
+[data-theme="dark"] .nav {
+  background: rgba(15,15,18,0.85);
+  border-bottom-color: rgba(255,255,255,0.06);
+}
+[data-theme="dark"] .nav.scrolled {
+  background: rgba(15,15,18,0.97);
+  box-shadow: 0 1px 20px rgba(0,0,0,0.5);
+}
+[data-theme="dark"] .nav-logo { color: #f0f2f5; }
+[data-theme="dark"] .nav-link { color: rgba(255,255,255,0.5); }
+[data-theme="dark"] .nav-link:hover { background: rgba(255,255,255,0.07); color: #fff; }
+[data-theme="dark"] .btn-ghost { background: rgba(255,255,255,0.09); color: #f0f2f5; }
+[data-theme="dark"] .btn-ghost:hover { background: rgba(255,255,255,0.14); }
+[data-theme="dark"] .btn-dark { background: #f0f2f5; color: #0d0d0d; }
+[data-theme="dark"] .btn-dark:hover { background: #fff; box-shadow: 0 4px 16px rgba(255,255,255,0.12); }
+
+/* Hero */
+[data-theme="dark"] .hero-badge {
+  background: rgba(212,175,55,0.1);
+  border-color: rgba(212,175,55,0.22);
+}
+[data-theme="dark"] .hero-title em { color: rgba(255,255,255,0.45); }
+[data-theme="dark"] .scroll-line {
+  background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.35));
+}
+
+/* Logos band */
+[data-theme="dark"] .logos { border-color: rgba(255,255,255,0.04); }
+[data-theme="dark"] .logos-label { color: rgba(255,255,255,0.28); }
+[data-theme="dark"] .logo-item { color: rgba(255,255,255,0.18); }
+[data-theme="dark"] .logo-item:hover { color: rgba(255,255,255,0.5); }
+
+/* Features */
+[data-theme="dark"] .section-label { color: rgba(255,255,255,0.38); }
+[data-theme="dark"] .section-desc  { color: rgba(255,255,255,0.48); }
+[data-theme="dark"] .feature-body  { color: rgba(255,255,255,0.52); }
+[data-theme="dark"] .feature-link  { color: #f0f2f5; border-bottom-color: rgba(255,255,255,0.35); }
+[data-theme="dark"] .feature-preview { border-color: rgba(255,255,255,0.07); }
+
+/* Mock UIs in dark mode */
+[data-theme="dark"] .mock-item {
+  background: rgba(255,255,255,0.04) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+[data-theme="dark"] .mock-item:hover {
+  background: rgba(255,255,255,0.08) !important;
+  box-shadow: none;
+}
+[data-theme="dark"] .mock-item-name { color: #f0f2f5; }
+[data-theme="dark"] .mock-item-val  { color: #f0f2f5; }
+[data-theme="dark"] .mock-title     { color: #f0f2f5; }
+[data-theme="dark"] .mock-stat {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.07);
+}
+[data-theme="dark"] .mock-stat-val { color: #f0f2f5; }
+[data-theme="dark"] .mock-bar      { background: rgba(255,255,255,0.1); }
+
+/* Statement section (already dark — keep as-is, just ensure text contrast) */
+[data-theme="dark"] .statement { background: #000; }
+
+/* Trust section */
+[data-theme="dark"] .trust-card { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.09); }
+
+/* Pricing */
+[data-theme="dark"] .pricing-card {
+  background: var(--bg-secondary);
+  border-color: rgba(255,255,255,0.08);
+}
+[data-theme="dark"] .pricing-plan    { color: rgba(255,255,255,0.38); }
+[data-theme="dark"] .pricing-headline { color: #f0f2f5; }
+[data-theme="dark"] .pricing-tagline  { color: rgba(255,255,255,0.42); }
+[data-theme="dark"] .pricing-feature  { color: rgba(255,255,255,0.6); border-top-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .pricing-card.featured .pricing-headline { color: #fff; }
+[data-theme="dark"] .pricing-card.featured { background: #111118; }
+
+/* Blog */
+[data-theme="dark"] .blogs { background: var(--bg-primary); }
+
+/* Footer */
+[data-theme="dark"] footer { border-top-color: rgba(255,255,255,0.06); }
+[data-theme="dark"] .footer-col-title { color: rgba(255,255,255,0.55); }
+[data-theme="dark"] footer a          { color: rgba(255,255,255,0.38); }
+[data-theme="dark"] footer a:hover    { color: rgba(255,255,255,0.8); }
+[data-theme="dark"] .footer-social-link {
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.55);
+}
+[data-theme="dark"] .footer-copyright { color: rgba(255,255,255,0.22); }
+[data-theme="dark"] .footer-legal a   { color: rgba(255,255,255,0.28); }
+[data-theme="dark"] .footer-brand-desc { color: rgba(255,255,255,0.38); }
+
+/* =================== INVERT THEME =================== */
+/* Apply CSS filter:invert to page content only (FABs + cursor stay outside) */
+[data-theme="invert"] #page-content {
+  filter: invert(1);
+  /* Preserve images if any */
+}
+[data-theme="invert"] #page-content img {
+  filter: invert(1); /* double invert = back to normal for real photos */
+}
+/* Edge aura turns from blue to orange in invert mode — looks great */
+
+/* =================== THEME TRANSITION =================== */
+/* Smooth color transitions when switching themes */
+body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
+.trust-card, .logo-item, .feature-preview {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease,
+    border-color 0.35s ease;
+}
+/* Don't transition transforms (breaks animations) */
+
