@@ -1475,16 +1475,143 @@ canvas.particles-canvas {
 [data-theme="dark"] .footer-legal a   { color: rgba(255,255,255,0.28); }
 [data-theme="dark"] .footer-brand-desc { color: rgba(255,255,255,0.38); }
 
-/* =================== INVERT THEME =================== */
-/* Apply CSS filter:invert to page content only (FABs + cursor stay outside) */
-[data-theme="invert"] #page-content {
-  filter: invert(1);
-  /* Preserve images if any */
+/* =================== INVERT / NEON THEME =================== */
+/* Electric high-contrast techy palette. No filter — fully CSS-variable driven. */
+[data-theme="invert"] {
+  --bg-primary:    #000000;
+  --bg-secondary:  #080810;
+  --bg-dark:       #000000;
+  --bg-card-dark:  #050508;
+  --text-primary:  #ffffff;
+  --text-secondary:#a0aac0;
+  --text-light:    #ffffff;
+  --accent-gold:   #00e5ff;      /* electric cyan instead of gold */
+  --border-light:  rgba(0, 229, 255, 0.15);
+  --border-dark:   rgba(0, 229, 255, 0.25);
 }
-[data-theme="invert"] #page-content img {
-  filter: invert(1); /* double invert = back to normal for real photos */
+
+/* Nav */
+[data-theme="invert"] .nav {
+  background: rgba(0, 0, 0, 0.92);
+  border-bottom: 1px solid rgba(0, 229, 255, 0.12);
 }
-/* Edge aura turns from blue to orange in invert mode — looks great */
+[data-theme="invert"] .nav.scrolled {
+  background: rgba(0, 0, 8, 0.98);
+  box-shadow: 0 1px 30px rgba(0, 229, 255, 0.08);
+}
+[data-theme="invert"] .nav-logo { color: #ffffff; }
+[data-theme="invert"] .nav-link { color: rgba(255,255,255,0.55); }
+[data-theme="invert"] .nav-link:hover { background: rgba(0,229,255,0.08); color: #00e5ff; }
+[data-theme="invert"] .btn-ghost {
+  background: rgba(0,229,255,0.08);
+  color: #00e5ff;
+  border: 1px solid rgba(0,229,255,0.25);
+}
+[data-theme="invert"] .btn-ghost:hover { background: rgba(0,229,255,0.15); }
+[data-theme="invert"] .btn-dark {
+  background: #00e5ff;
+  color: #000000;
+  box-shadow: 0 0 20px rgba(0,229,255,0.35);
+}
+[data-theme="invert"] .btn-dark:hover {
+  background: #33ecff;
+  box-shadow: 0 0 30px rgba(0,229,255,0.5);
+}
+
+/* Hero */
+[data-theme="invert"] .hero-badge {
+  background: rgba(0,229,255,0.08);
+  border-color: rgba(0,229,255,0.3);
+  color: #00e5ff;
+}
+[data-theme="invert"] .hero-badge .dot { background: #00e5ff; }
+[data-theme="invert"] .hero-title { color: #ffffff; }
+[data-theme="invert"] .hero-title em { color: rgba(0,229,255,0.75); }
+[data-theme="invert"] .hero-subtitle { color: rgba(255,255,255,0.55); }
+[data-theme="invert"] .scroll-line {
+  background: linear-gradient(to bottom, transparent, rgba(0,229,255,0.5));
+}
+
+/* Logos */
+[data-theme="invert"] .logos { border-color: rgba(0,229,255,0.08); }
+[data-theme="invert"] .logos-label { color: rgba(255,255,255,0.3); }
+[data-theme="invert"] .logo-item { color: rgba(255,255,255,0.2); }
+[data-theme="invert"] .logo-item:hover { color: #00e5ff; }
+
+/* Section labels and text */
+[data-theme="invert"] .section-label { color: #00e5ff; letter-spacing: 0.1em; }
+[data-theme="invert"] .section-title { color: #ffffff; }
+[data-theme="invert"] .section-desc { color: rgba(255,255,255,0.5); }
+[data-theme="invert"] .feature-tag { color: #00e5ff; }
+[data-theme="invert"] .feature-body { color: rgba(255,255,255,0.52); }
+[data-theme="invert"] .feature-title { color: #ffffff; }
+[data-theme="invert"] .feature-link { color: #00e5ff; border-bottom-color: rgba(0,229,255,0.4); }
+[data-theme="invert"] .feature-preview { border-color: rgba(0,229,255,0.12); }
+
+/* Mock UIs */
+[data-theme="invert"] .mock-item {
+  background: rgba(0,229,255,0.04) !important;
+  border-color: rgba(0,229,255,0.1) !important;
+}
+[data-theme="invert"] .mock-item:hover {
+  background: rgba(0,229,255,0.09) !important;
+  box-shadow: 0 0 12px rgba(0,229,255,0.1) !important;
+  transform: translateX(2px);
+}
+[data-theme="invert"] .mock-item-name { color: #fff; }
+[data-theme="invert"] .mock-item-val  { color: #00e5ff; }
+[data-theme="invert"] .mock-title     { color: #fff; }
+[data-theme="invert"] .mock-badge     { background: rgba(0,229,255,0.12); color: #00e5ff; }
+[data-theme="invert"] .mock-stat {
+  background: rgba(0,229,255,0.05);
+  border-color: rgba(0,229,255,0.1);
+}
+[data-theme="invert"] .mock-stat-val { color: #00e5ff; }
+[data-theme="invert"] .mock-bar  { background: rgba(255,255,255,0.08); }
+
+/* Statement section */
+[data-theme="invert"] .statement { background: #000; }
+[data-theme="invert"] .statement-text { color: #fff; }
+[data-theme="invert"] .statement-text em { color: #00e5ff; }
+
+/* Trust */
+[data-theme="invert"] .trust-card {
+  background: rgba(0,229,255,0.04);
+  border-color: rgba(0,229,255,0.1);
+}
+[data-theme="invert"] .trust-stat-val { color: #00e5ff; }
+
+/* Pricing */
+[data-theme="invert"] .pricing-card {
+  background: #060610;
+  border-color: rgba(0,229,255,0.1);
+}
+[data-theme="invert"] .pricing-plan    { color: rgba(255,255,255,0.38); }
+[data-theme="invert"] .pricing-headline { color: #fff; }
+[data-theme="invert"] .pricing-tagline  { color: rgba(255,255,255,0.42); }
+[data-theme="invert"] .pricing-feature  { color: rgba(255,255,255,0.6); border-top-color: rgba(0,229,255,0.08); }
+[data-theme="invert"] .pricing-card.featured {
+  background: #0a0a1a;
+  border-color: rgba(0,229,255,0.3);
+  box-shadow: 0 0 40px rgba(0,229,255,0.1);
+}
+
+/* Footer */
+[data-theme="invert"] footer { border-top-color: rgba(0,229,255,0.08); }
+[data-theme="invert"] .footer-col-title { color: rgba(255,255,255,0.5); }
+[data-theme="invert"] footer a          { color: rgba(255,255,255,0.35); }
+[data-theme="invert"] footer a:hover    { color: #00e5ff; }
+[data-theme="invert"] .footer-social-link {
+  background: rgba(0,229,255,0.07);
+  color: rgba(0,229,255,0.7);
+}
+[data-theme="invert"] .footer-copyright { color: rgba(255,255,255,0.2); }
+[data-theme="invert"] .footer-legal a   { color: rgba(255,255,255,0.25); }
+[data-theme="invert"] .footer-brand-desc { color: rgba(255,255,255,0.35); }
+
+/* Gold accent → cyan in invert */
+[data-theme="invert"] .gold { color: #00e5ff !important; }
+[data-theme="invert"] .mock-badge.gold { background: rgba(0,229,255,0.12); }
 
 /* =================== THEME TRANSITION =================== */
 /* Smooth color transitions when switching themes */
