@@ -19,264 +19,109 @@ const GemMark = ({ size = 28 }) => (
 
 const NeuralBg = () => {
   const canvasRef = useRef(null);
-  const glowRef   = useRef(null);
   const stateRef  = useRef({
     mouse:   { x: -9999, y: -9999 },
-    lerpPos: { x: -9999, y: -9999 },
-    scroll:  0,
     raf:     null,
-    triggered: new Set(),
   });
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const glowEl = glowRef.current;
-    if (!canvas || !glowEl) return;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const N = 120;
+    const CONN = 140;
+    const REPEL_R = 250;
 
-    const ctx      = canvas.getContext('2d');
-    const N        = 100;      // neuron count
-    const CONN     = 150;      // max synapse draw distance (px)
-    const REPEL_R  = 140;      // cursor repel radius
-
-    let neurons = [];   // physics particles
-    let signals = [];   // traveling pulses
-
-    // ── Init / Resize ──────────────────────────────────────────
+    let neurons = [];
+    
     const init = () => {
-      canvas.width  = window.innerWidth;
+      canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      const W = canvas.width, H = canvas.height;
       neurons = Array.from({ length: N }, () => ({
-        x:  Math.random() * W,
-        y:  Math.random() * H,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        r:  1.8 + Math.random() * 2.2,   // visual radius
-        phase: Math.random() * Math.PI * 2,
-        activity: 0,
-        glow: 0,
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.8,
+        vy: (Math.random() - 0.5) * 0.8,
+        r: 1.5 + Math.random() * 2.0,
       }));
-      signals = [];
     };
     init();
     window.addEventListener('resize', init);
 
-    // ── Mouse tracking ──────────────────────────────────────────
     const onMouse = e => {
       stateRef.current.mouse = { x: e.clientX, y: e.clientY };
     };
     window.addEventListener('mousemove', onMouse);
 
-    // ── Scroll tracking & threshold cascades ────────────────────
-    const onScroll = () => {
-      const docH  = document.documentElement.scrollHeight - window.innerHeight;
-      const ratio = docH > 0 ? window.scrollY / docH : 0;
-      stateRef.current.scroll = ratio;
-      // Wave cascades at key scroll depths
-      [0.04, 0.18, 0.38, 0.60, 0.82].forEach((thresh, i) => {
-        if (!stateRef.current.triggered.has(i) && ratio >= thresh) {
-          stateRef.current.triggered.add(i);
-          cascadeWave();
-        }
-      });
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-
-    // ── Fire a neuron ────────────────────────────────────────────
-    const fire = (n, str = 1) => {
-      n.activity = Math.min(1, n.activity + str);
-      n.glow     = Math.min(1, n.glow     + str);
-    };
-
-    // ── Spawn a signal pulse to a random nearby neuron ───────────
-    const spawnSignal = (from, strength = 1) => {
-      // pick a close neighbour
-      let best = null, bestD = Infinity;
-      for (let k = 0; k < neurons.length; k++) {
-        if (neurons[k] === from) continue;
-        const dx = neurons[k].x - from.x, dy = neurons[k].y - from.y;
-        const d  = Math.sqrt(dx*dx + dy*dy);
-        if (d < CONN && d < bestD && Math.random() < 0.6) {
-          bestD = d; best = neurons[k];
-        }
-      }
-      if (!best) return;
-      signals.push({
-        from, to: best,
-        t: 0,
-        speed: 0.010 + Math.random() * 0.012,
-        // gold or teal signal
-        col: Math.random() < 0.55 ? [212, 175, 55] : [0, 220, 180],
-        str: strength,
-      });
-    };
-
-    // ── Cascade: sweep activations left → right ──────────────────
-    const cascadeWave = () => {
-      const sorted = [...neurons].sort((a, b) => a.x - b.x);
-      sorted.forEach((n, i) => {
-        const delay = i * 9 + Math.random() * 15;
-        setTimeout(() => {
-          fire(n, 0.7 + Math.random() * 0.3);
-          spawnSignal(n, 0.9);
-        }, delay);
-      });
-    };
-
-    // ── Main draw loop ───────────────────────────────────────────
-    let lastT   = performance.now();
-    let nextAuto = Date.now() + 600;
+    let lastT = performance.now();
 
     const draw = (ts) => {
       const dt = Math.min(32, ts - lastT) / 16;
       lastT = ts;
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const W = canvas.width, H = canvas.height;
-      const { mouse, scroll } = stateRef.current;
+      const { mouse } = stateRef.current;
 
-      // Energy ramps with scroll (min 0.3, max 2.0)
-      const energy = 0.3 + scroll * 1.7;
-
-      // Glow div — smooth lerp
-      const LERP = 0.08;
-      const lp = stateRef.current.lerpPos;
-      lp.x += (mouse.x - lp.x) * LERP;
-      lp.y += (mouse.y - lp.y) * LERP;
-      if (lp.x > -9000) glowEl.style.opacity = '1';
-      glowEl.style.setProperty('--gx', `${lp.x}px`);
-      glowEl.style.setProperty('--gy', `${lp.y}px`);
-
-      // Random ambient spike
-      if (Date.now() > nextAuto) {
-        const n = neurons[Math.floor(Math.random() * neurons.length)];
-        fire(n, 0.4 + Math.random() * 0.5);
-        spawnSignal(n, 0.7);
-        nextAuto = Date.now() + 400 + Math.random() * 700;
-      }
-
-      // ── Update neurons ─────────────────────────────────────────
+      // Update
       neurons.forEach(n => {
-        // Cursor repulsion
         const dx = n.x - mouse.x, dy = n.y - mouse.y;
-        const d  = Math.sqrt(dx*dx + dy*dy);
+        const d = Math.sqrt(dx*dx + dy*dy);
         if (d < REPEL_R && d > 0) {
-          const f = ((1 - d / REPEL_R) ** 1.5) * 2.8;
+          const f = ((1 - d / REPEL_R) ** 1.5) * 3.5;
           n.vx += (dx / d) * f * dt;
           n.vy += (dy / d) * f * dt;
-          fire(n, (1 - d / REPEL_R) * 0.10 * dt);
-          if (Math.random() < 0.025 * (1 - d / REPEL_R)) spawnSignal(n, 0.8);
         }
 
-        // Soft wall force (pushes inward)
-        const WALL = 60;
-        if (n.x < WALL)   n.vx += (WALL  - n.x)       * 0.012 * dt;
-        if (n.x > W-WALL) n.vx -= (n.x - (W - WALL))  * 0.012 * dt;
-        if (n.y < WALL)   n.vy += (WALL  - n.y)        * 0.012 * dt;
-        if (n.y > H-WALL) n.vy -= (n.y - (H - WALL))  * 0.012 * dt;
+        const WALL = 40;
+        if (n.x < WALL) n.vx += (WALL - n.x) * 0.01 * dt;
+        if (n.x > W-WALL) n.vx -= (n.x - (W - WALL)) * 0.01 * dt;
+        if (n.y < WALL) n.vy += (WALL - n.y) * 0.01 * dt;
+        if (n.y > H-WALL) n.vy -= (n.y - (H - WALL)) * 0.01 * dt;
 
-        // Brownian drift
-        n.vx += (Math.random() - 0.5) * 0.06 * dt;
-        n.vy += (Math.random() - 0.5) * 0.06 * dt;
+        n.vx += (Math.random() - 0.5) * 0.05 * dt;
+        n.vy += (Math.random() - 0.5) * 0.05 * dt;
 
-        // Speed cap (energy-scaled)
         const spd = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
-        const cap = 0.6 + energy * 0.55;
-        if (spd > cap) { n.vx = (n.vx/spd)*cap; n.vy = (n.vy/spd)*cap; }
-
-        // Damping
-        n.vx *= 0.975;
-        n.vy *= 0.975;
-
-        n.x += n.vx * dt;
-        n.y += n.vy * dt;
-
-        // Breathing phase
-        n.phase += 0.018 * dt;
-        // Decay
-        n.activity *= 0.92;
-        n.glow     *= 0.88;
+        if (spd > 1.5) { n.vx = (n.vx/spd)*1.5; n.vy = (n.vy/spd)*1.5; }
+        n.vx *= 0.98; n.vy *= 0.98;
+        n.x += n.vx * dt; n.y += n.vy * dt;
       });
 
-      // ── Draw synaptic connections ──────────────────────────────
-      // (Only check unique pairs — O(n²/2). At N=100, ≈5000 pairs.)
-      const connAlphaBase = 0.05 + scroll * 0.10;
+      // Connections
       for (let i = 0; i < neurons.length; i++) {
         const a = neurons[i];
         for (let j = i + 1; j < neurons.length; j++) {
-          const b   = neurons[j];
+          const b = neurons[j];
           const ddx = b.x - a.x, ddy = b.y - a.y;
-          const dd  = Math.sqrt(ddx*ddx + ddy*ddy);
+          const dd = Math.sqrt(ddx*ddx + ddy*ddy);
           if (dd > CONN) continue;
-          const alpha = (1 - dd / CONN) * connAlphaBase;
-          const act   = Math.max(a.activity, b.activity);
+          
+          // Grayscale line color
+          const alpha = (1 - dd / CONN) * 0.15;
           ctx.beginPath();
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(80, 120, 200, ${alpha + act * 0.18})`;
-          ctx.lineWidth   = 0.55 + act * 1.1;
+          ctx.strokeStyle = `rgba(100, 100, 100, ${alpha})`;
+          ctx.lineWidth = 0.8;
           ctx.stroke();
         }
       }
 
-      // ── Draw & advance signals ─────────────────────────────────
-      signals = signals.filter(s => s.t < 1.0);
-      for (let i = signals.length - 1; i >= 0; i--) {
-        const s = signals[i];
-        s.t += s.speed * dt;
-        if (s.t >= 1.0) {
-          fire(s.to, s.str * 0.6);
-          if (Math.random() < 0.45) spawnSignal(s.to, s.str * 0.75);
-          continue;
-        }
-        const px = s.from.x + (s.to.x - s.from.x) * s.t;
-        const py = s.from.y + (s.to.y - s.from.y) * s.t;
-        const [r, g, b] = s.col;
-        const alpha = Math.sin(s.t * Math.PI) * s.str;
-
-        // Glow orb
-        const g1 = ctx.createRadialGradient(px, py, 0, px, py, 12);
-        g1.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.85})`);
-        g1.addColorStop(1, `rgba(${r},${g},${b},0)`);
-        ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2);
-        ctx.fillStyle = g1; ctx.fill();
-        // Core dot
-        ctx.beginPath(); ctx.arc(px, py, 2.8, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, alpha * 2.2)})`;
-        ctx.fill();
-      }
-
-      // ── Draw neurons ───────────────────────────────────────────
+      // Draw nodes: close are dark/black, far are gray
       neurons.forEach(n => {
-        const act   = n.activity;
-        const pulse = 0.5 + 0.5 * Math.sin(n.phase);
-        const glow  = n.glow;
-
-        // Color: dark blue-gray → gold as activity rises
-        const r  = Math.round(50  + act * 162);   // 50 → 212
-        const gr = Math.round(70  + act * 105);   // 70 → 175
-        const bl = Math.round(120 - act * 65);    // 120 → 55
-
-        // Outer glow halo
-        if (glow > 0.04) {
-          const hr  = n.r * 5 + glow * 18;
-          const hg  = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, hr);
-          hg.addColorStop(0, `rgba(${r},${gr},${bl},${glow * 0.40})`);
-          hg.addColorStop(1, `rgba(${r},${gr},${bl},0)`);
-          ctx.beginPath(); ctx.arc(n.x, n.y, hr, 0, Math.PI*2);
-          ctx.fillStyle = hg; ctx.fill();
-        }
-
-        // Node body
-        const nr = n.r * (1 + pulse * 0.18 + act * 0.35);
-        ctx.beginPath(); ctx.arc(n.x, n.y, nr, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(${r},${gr},${bl},${0.35 + act * 0.55 + pulse * (0.08 + scroll * 0.07)})`;
+        const dx = n.x - mouse.x, dy = n.y - mouse.y;
+        const d = Math.sqrt(dx*dx + dy*dy);
+        const factor = Math.max(0, 1 - d / 400); // 1 = closest
+        
+        // 180 = grey, 0 = black
+        const rgb = Math.round(180 - factor * 180);
+        
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r * (1 + factor * 0.5), 0, Math.PI*2);
+        ctx.fillStyle = `rgb(${rgb}, ${rgb}, ${rgb})`;
         ctx.fill();
-
-        // Thin ring
-        ctx.beginPath(); ctx.arc(n.x, n.y, nr * 2.0, 0, Math.PI*2);
-        ctx.strokeStyle = `rgba(${r},${gr},${bl},${(0.06 + act * 0.18) * (0.4 + scroll * 0.6)})`;
-        ctx.lineWidth   = 0.7;
+        ctx.strokeStyle = `rgba(150, 150, 150, 0.4)`;
+        ctx.lineWidth = 0.5;
         ctx.stroke();
       });
 
@@ -289,52 +134,15 @@ const NeuralBg = () => {
       cancelAnimationFrame(stateRef.current.raf);
       window.removeEventListener('mousemove', onMouse);
       window.removeEventListener('resize', init);
-      window.removeEventListener('scroll', onScroll);
     };
   }, []);
 
   return (
-    <>
-      {/* Physics neuron canvas */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'fixed', top: 0, left: 0,
-          width: '100vw', height: '100vh',
-          pointerEvents: 'none', zIndex: 1,
-        }}
-      />
-
-      {/* Smooth radial gradient glow that follows the cursor */}
-      <div
-        ref={glowRef}
-        style={{
-          position: 'fixed', top: 0, left: 0,
-          width: '100vw', height: '100vh',
-          pointerEvents: 'none',
-          zIndex: 2,
-          opacity: 0,
-          transition: 'opacity 0.6s ease',
-          background: `radial-gradient(
-            600px circle at var(--gx, 50%) var(--gy, 50%),
-            rgba(212, 175, 55, 0.07)   0%,
-            rgba(100, 140, 230, 0.06) 35%,
-            rgba(150, 100, 220, 0.04) 60%,
-            transparent               80%
-          )`,
-        }}
-      />
-
-      {/* Static edge aura */}
-      <div
-        style={{
-          position: 'fixed', top: 0, left: 0,
-          width: '100vw', height: '100vh',
-          pointerEvents: 'none', zIndex: 0,
-          boxShadow: 'inset 0 0 140px rgba(90, 130, 220, 0.10)',
-        }}
-      />
-    </>
+    <canvas ref={canvasRef} style={{
+      position: 'fixed', top: 0, left: 0,
+      width: '100vw', height: '100vh',
+      pointerEvents: 'none', zIndex: 1,
+    }} />
   );
 };
 
@@ -1073,153 +881,157 @@ const Nav = () => {
 const SCENARIOS = [
   {
     id: "scen-1",
-    label: "Intelligent Intake",
-    description: "Automated ingestion pipeline for incoming appraisal requests.",
+    label: "Phishing Analysis (urlscan.io & VirusTotal)",
+    description: "Automated alert triage via URLScan.io and VirusTotal.",
     nodes: [
-      { id: "n1", label: "Salesforce", icon: "☁️", x: 100, y: 65 },
-      { id: "n2", label: "CSV Export", icon: "📄", x: 100, y: 195 },
-      { id: "n3", label: "Azure DB", icon: "🔷", x: 300, y: 130 },
-      { id: "n4", label: "Gemini", icon: "✨", x: 500, y: 130 },
-      { id: "n5", label: "Databricks", icon: "🧱", x: 700, y: 130 }
-    ],
-    paths: [
-      { id: "p1", d: "M 140 65 C 200 65, 200 130, 260 130" },
-      { id: "p2", d: "M 140 195 C 200 195, 200 130, 260 130" },
-      { id: "p3", d: "M 340 130 L 460 130" },
-      { id: "p4", d: "M 540 130 L 660 130" }
-    ],
-    signals: [
-      { pathId: "p1", delay: 0, dur: 1.5, color: "#00e5ff" },
-      { pathId: "p1", delay: 1, dur: 1.5, color: "#00e5ff" },
-      { pathId: "p2", delay: 0.5, dur: 1.5, color: "#d4af37" },
-      { pathId: "p3", delay: 0, dur: 1.2, color: "#ffffff" },
-      { pathId: "p3", delay: 0.8, dur: 1.2, color: "#ffffff" },
-      { pathId: "p4", delay: 0.2, dur: 1.5, color: "#a078e6" },
-      { pathId: "p4", delay: 1.2, dur: 1.5, color: "#a078e6" }
-    ]
-  },
-  {
-    id: "scen-2",
-    label: "Market Data Sync",
-    description: "Real-time harmonization of global bid/ask prices via Snowflake.",
-    nodes: [
-      { id: "n1", label: "Snowflake", icon: "❄️", x: 100, y: 130 },
-      { id: "n2", label: "Hadoop", icon: "🐘", x: 300, y: 65 },
-      { id: "n3", label: "Claude", icon: "🧠", x: 300, y: 195 },
-      { id: "n4", label: "Caratsense API", icon: "💎", x: 500, y: 130 },
-      { id: "n5", label: "Live Dashboard", icon: "📈", x: 700, y: 130 }
+      { id: "n1", label: "Webhook", iconUrl: "https://cdn.simpleicons.org/n8n/FF6D5A", x: 100, y: 130 },
+      { id: "n2", label: "urlscan.io", iconUrl: "https://cdn.simpleicons.org/googlechrome/4285F4", x: 300, y: 65 },
+      { id: "n3", label: "VirusTotal", iconUrl: "https://cdn.simpleicons.org/virustotal/394EFF", x: 300, y: 195 },
+      { id: "n4", label: "Slack", iconUrl: "https://cdn.simpleicons.org/slack/4A154B", x: 500, y: 130 },
     ],
     paths: [
       { id: "p1", d: "M 140 130 C 200 130, 200 65, 260 65" },
       { id: "p2", d: "M 140 130 C 200 130, 200 195, 260 195" },
       { id: "p3", d: "M 340 65 C 400 65, 400 130, 460 130" },
-      { id: "p4", d: "M 340 195 C 400 195, 400 130, 460 130" },
-      { id: "p5", d: "M 540 130 L 660 130" }
+      { id: "p4", d: "M 340 195 C 400 195, 400 130, 460 130" }
     ],
     signals: [
-      { pathId: "p1", delay: 0, dur: 2, color: "#00e5ff" },
-      { pathId: "p2", delay: 0.5, dur: 2, color: "#d4af37" },
-      { pathId: "p3", delay: 1.0, dur: 1.8, color: "#a078e6" },
-      { pathId: "p4", delay: 1.5, dur: 1.8, color: "#ffffff" },
-      { pathId: "p5", delay: 2.0, dur: 1.5, color: "#00e5ff" }
+      { pathId: "p1", delay: 0, dur: 1.5, color: "#a078e6" },
+      { pathId: "p2", delay: 0.2, dur: 1.5, color: "#a078e6" },
+      { pathId: "p3", delay: 1.5, dur: 1.5, color: "#d4af37" },
+      { pathId: "p4", delay: 1.7, dur: 1.5, color: "#d4af37" }
+    ]
+  },
+  {
+    id: "scen-2",
+    label: "Lead Enrichment",
+    description: "Enrich form submissions using Clearbit before pushing to Salesforce.",
+    nodes: [
+      { id: "n1", label: "Typeform", iconUrl: "https://cdn.simpleicons.org/typeform/111111", x: 100, y: 130 },
+      { id: "n2", label: "Clearbit", iconUrl: "https://cdn.simpleicons.org/clearbit/26B9BA", x: 300, y: 130 },
+      { id: "n3", label: "Salesforce", iconUrl: "https://cdn.simpleicons.org/salesforce/00A1E0", x: 500, y: 130 },
+      { id: "n4", label: "Gmail", iconUrl: "https://cdn.simpleicons.org/gmail/EA4335", x: 700, y: 130 }
+    ],
+    paths: [
+      { id: "p1", d: "M 140 130 L 260 130" },
+      { id: "p2", d: "M 340 130 L 460 130" },
+      { id: "p3", d: "M 540 130 L 660 130" }
+    ],
+    signals: [
+      { pathId: "p1", delay: 0, dur: 1.2, color: "#00e5ff" },
+      { pathId: "p2", delay: 1.2, dur: 1.2, color: "#d4af37" },
+      { pathId: "p3", delay: 2.4, dur: 1.2, color: "#a078e6" }
     ]
   },
   {
     id: "scen-3",
-    label: "Enterprise Distribution",
-    description: "Multi-modal load balancing for parallel valuation pipelines.",
+    label: "Automated Onboarding",
+    description: "Provision Jira, Google Workspace, and Teams on Stripe purchase.",
     nodes: [
-      { id: "n1", label: "API Gateway", icon: "⚖️", x: 100, y: 130 },
-      { id: "n2", label: "GPT-4 Proxy", icon: "🟢", x: 300, y: 130 },
-      { id: "n3", label: "DynamoDB", icon: "🧩", x: 500, y: 65 },
-      { id: "n4", label: "ServiceNow", icon: "⚙️", x: 500, y: 195 },
-      { id: "n5", label: "Client ERP", icon: "🏢", x: 700, y: 130 }
+      { id: "n1", label: "Stripe", iconUrl: "https://cdn.simpleicons.org/stripe/008CDD", x: 100, y: 130 },
+      { id: "n2", label: "Jira", iconUrl: "https://cdn.simpleicons.org/jira/0052CC", x: 300, y: 65 },
+      { id: "n3", label: "Workspace", iconUrl: "https://cdn.simpleicons.org/googleworkspace/4285F4", x: 300, y: 195 },
+      { id: "n4", label: "Teams", iconUrl: "https://cdn.simpleicons.org/microsoftteams/6264A7", x: 500, y: 130 }
     ],
     paths: [
-      { id: "p1", d: "M 140 130 L 260 130" },
-      { id: "p2", d: "M 340 130 C 400 130, 400 65, 460 65" },
-      { id: "p3", d: "M 340 130 C 400 130, 400 195, 460 195" },
-      { id: "p4", d: "M 540 65 C 600 65, 600 130, 660 130" },
-      { id: "p5", d: "M 540 195 C 600 195, 600 130, 660 130" }
+      { id: "p1", d: "M 140 130 C 200 130, 200 65, 260 65" },
+      { id: "p2", d: "M 140 130 C 200 130, 200 195, 260 195" },
+      { id: "p3", d: "M 340 65 C 400 65, 400 130, 460 130" },
+      { id: "p4", d: "M 340 195 C 400 195, 400 130, 460 130" }
     ],
     signals: [
-      { pathId: "p1", delay: 0, dur: 1.2, color: "#ffffff" },
-      { pathId: "p2", delay: 0.6, dur: 1.5, color: "#00e5ff" },
-      { pathId: "p3", delay: 0.8, dur: 1.5, color: "#d4af37" },
-      { pathId: "p4", delay: 1.4, dur: 1.2, color: "#00e5ff" },
-      { pathId: "p5", delay: 1.6, dur: 1.2, color: "#a078e6" }
+      { pathId: "p1", delay: 0, dur: 1.5, color: "#d4af37" },
+      { pathId: "p2", delay: 0.2, dur: 1.5, color: "#d4af37" },
+      { pathId: "p3", delay: 1.5, dur: 1.5, color: "#00e5ff" },
+      { pathId: "p4", delay: 1.7, dur: 1.5, color: "#00e5ff" }
     ]
   }
 ];
 
 const WorkflowShowcase = () => {
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  const prev = () => setActiveIdx((i) => (i === 0 ? SCENARIOS.length - 1 : i - 1));
+  const next = () => setActiveIdx((i) => (i === SCENARIOS.length - 1 ? 0 : i + 1));
+
+  const scen = SCENARIOS[activeIdx];
+
   return (
     <section className="workflows-section fade-in" id="workflows">
        <div className="section-header" style={{ textAlign: 'center', marginBottom: 40, marginTop: 40 }}>
          <p className="section-label">Enterprise Integrations</p>
          <h2 className="section-title">Automate Every Valuation Workflow</h2>
-         <p className="section-desc" style={{ maxWidth: 640, margin: '16px auto 0' }}>
-           Connect Caratsense to your existing infrastructure. We support seamless bi-directional data pipelines via REST APIs, webhooks, and major enterprise data warehouses.
-         </p>
        </div>
        
-       <div className="workflow-scroller">
-         <div className="workflow-scroller-inner">
-           {SCENARIOS.map((scen, idx) => (
-             <div key={scen.id} className="workflow-card fade-in" style={{ animationDelay: `${idx * 0.15}s` }}>
-               <div className="workflow-card-header">
-                 <h3 className="workflow-card-title">{scen.label}</h3>
-                 <p className="workflow-card-desc">{scen.description}</p>
-               </div>
-               
-               <div className="workflow-canvas-wrap">
-                 <svg viewBox="0 0 800 260" className="workflow-svg">
-                   <defs>
-                     <filter id="glow-sig" x="-50%" y="-50%" width="200%" height="200%">
-                       <feGaussianBlur stdDeviation="3" result="blur" />
-                       <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                     </filter>
-                     {scen.paths.map(p => (
-                       <path key={`def-${p.id}`} id={`${scen.id}-${p.id}`} d={p.d} fill="none" />
-                     ))}
-                   </defs>
-                   
-                   {scen.paths.map(p => (
-                     <path 
-                       key={p.id} 
-                       d={p.d} 
-                       stroke="rgba(150, 160, 180, 0.25)" 
-                       strokeWidth="2" 
-                       strokeDasharray="4 4" 
-                       fill="none" 
-                     />
-                   ))}
+       <div className="workflow-carousel-wrap">
+         <button className="carousel-btn left" onClick={prev}>
+           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+         </button>
 
-                   {scen.signals.map((sig, i) => (
-                      <circle key={i} r="4.5" fill={sig.color} filter="url(#glow-sig)">
-                        <animateMotion 
-                          dur={`${sig.dur}s`} 
-                          repeatCount="indefinite"
-                          begin={`${sig.delay}s`}
-                        >
-                          <mpath href={`#${scen.id}-${sig.pathId}`} />
-                        </animateMotion>
-                      </circle>
-                   ))}
-                   
-                   {scen.nodes.map(n => (
-                     <foreignObject key={n.id} x={n.x - 40} y={n.y - 40} width="80" height="80" style={{ overflow: 'visible' }}>
-                       <div className="workflow-node" xmlns="http://www.w3.org/1999/xhtml">
-                         <div className="workflow-node-icon">{n.icon}</div>
-                         <div className="workflow-node-label">{n.label}</div>
-                       </div>
-                     </foreignObject>
-                   ))}
-                 </svg>
-               </div>
-             </div>
-           ))}
+         <div className="workflow-card fade-in" key={scen.id}>
+           <div className="workflow-card-header">
+             <h3 className="workflow-card-title">{scen.label}</h3>
+             <p className="workflow-card-desc">{scen.description}</p>
+           </div>
+           
+           <div className="workflow-canvas-wrap">
+             <svg viewBox="0 0 800 260" className="workflow-svg">
+               <defs>
+                 <filter id="glow-sig" x="-50%" y="-50%" width="200%" height="200%">
+                   <feGaussianBlur stdDeviation="3" result="blur" />
+                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                 </filter>
+                 {scen.paths.map(p => (
+                   <path key={`def-${p.id}`} id={`${scen.id}-${p.id}`} d={p.d} fill="none" />
+                 ))}
+               </defs>
+               
+               {scen.paths.map(p => (
+                 <path 
+                   key={p.id} 
+                   d={p.d} 
+                   stroke="rgba(150, 160, 180, 0.4)" 
+                   strokeWidth="2" 
+                   strokeDasharray="4 4" 
+                   fill="none" 
+                 />
+               ))}
+
+               {scen.signals.map((sig, i) => (
+                  <circle key={i} r="4.5" fill={sig.color} filter="url(#glow-sig)">
+                    <animateMotion 
+                      dur={`${sig.dur}s`} 
+                      repeatCount="indefinite"
+                      begin={`${sig.delay}s`}
+                    >
+                      <mpath href={`#${scen.id}-${sig.pathId}`} />
+                    </animateMotion>
+                  </circle>
+               ))}
+               
+               {scen.nodes.map(n => (
+                 <foreignObject key={n.id} x={n.x - 40} y={n.y - 40} width="80" height="80" style={{ overflow: 'visible' }}>
+                   <div className="workflow-node" xmlns="http://www.w3.org/1999/xhtml">
+                     <div className="workflow-node-icon">
+                       <img src={n.iconUrl} alt={n.label} width="24" height="24" style={{ display: 'block' }} />
+                     </div>
+                     <div className="workflow-node-label">{n.label}</div>
+                   </div>
+                 </foreignObject>
+               ))}
+             </svg>
+           </div>
          </div>
+
+         <button className="carousel-btn right" onClick={next}>
+           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+         </button>
+       </div>
+
+       <div className="carousel-dots">
+         {SCENARIOS.map((_, i) => (
+           <span key={i} className={`carousel-dot ${i === activeIdx ? 'active' : ''}`} onClick={() => setActiveIdx(i)} />
+         ))}
        </div>
     </section>
   );

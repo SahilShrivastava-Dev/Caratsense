@@ -1726,33 +1726,53 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   z-index: 2;
   margin-top: 24px;
 }
-.workflow-scroller {
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  scroll-snap-type: x mandatory;
-  padding: 0 40px 60px;
-  -webkit-overflow-scrolling: touch;
-}
-.workflow-scroller::-webkit-scrollbar {
-  display: none;
-}
-.workflow-scroller-inner {
+.workflow-carousel-wrap {
   display: flex;
-  gap: 32px;
-  width: max-content;
-  /* Add start/end padding so items center nicely on wide screens */
-  padding: 0 calc(50vw - 400px - 40px);
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 0 20px;
 }
-@media (max-width: 800px) {
-  .workflow-scroller-inner {
-    padding: 0 20px;
-  }
+
+.carousel-btn {
+  background: rgba(0,0,0,0.05);
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #000;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.carousel-btn:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.15);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.carousel-dot.active {
+  background: #000;
 }
 
 .workflow-card {
   width: 800px;
   height: 400px;
-  scroll-snap-align: center;
   background: rgba(20, 24, 30, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 24px;
@@ -1813,8 +1833,9 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   background: rgba(255,255,255,0.06);
 }
 .workflow-node-icon {
-  font-size: 24px;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-bottom: 6px;
 }
 .workflow-node-label {
@@ -1826,8 +1847,9 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   letter-spacing: 0.05em;
 }
 
+/* Base Light Theme */
 [data-theme="light"] .workflow-card {
-  background: rgba(255, 255, 255, 0.6);
+  background: #ffffff;
   border-color: rgba(0, 0, 0, 0.08);
 }
 [data-theme="light"] .workflow-card-title { color: #0d0d0d; }
@@ -1837,16 +1859,34 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
 [data-theme="light"] .workflow-node-label { color: rgba(0,0,0,0.8); }
 [data-theme="light"] .workflow-node:hover { border-color: #0d0d0d; }
 
+/* Invert Theme overrides */
 [data-theme="invert"] .workflow-card {
-  background: rgba(0, 0, 0, 0.4);
+  background: #000;
   border-color: rgba(0, 229, 255, 0.15);
 }
+[data-theme="invert"] .workflow-card-title { color: #fff; }
+[data-theme="invert"] .workflow-card-desc { color: rgba(255,255,255,0.6); }
+[data-theme="invert"] .carousel-btn { background: rgba(0,229,255,0.1); color: #00e5ff; }
+[data-theme="invert"] .carousel-btn:hover { background: rgba(0,229,255,0.2); }
+[data-theme="invert"] .carousel-dot { background: rgba(0,229,255,0.2); }
+[data-theme="invert"] .carousel-dot.active { background: #00e5ff; }
 [data-theme="invert"] .workflow-card:hover {
   border-color: rgba(0, 229, 255, 0.4);
 }
 [data-theme="invert"] .workflow-node {
   border-color: rgba(0, 229, 255, 0.2);
 }
+[data-theme="invert"] .workflow-node-label { color: rgba(255,255,255,0.8); }
 [data-theme="invert"] .workflow-node:hover {
   border-color: rgba(0, 229, 255, 0.8);
 }
+
+/* Dark Theme overrides */
+[data-theme="dark"] .workflow-card {
+  background: #111;
+}
+[data-theme="dark"] .carousel-btn { background: rgba(255,255,255,0.1); color: #fff; }
+[data-theme="dark"] .carousel-btn:hover { background: rgba(255,255,255,0.2); }
+[data-theme="dark"] .carousel-dot { background: rgba(255,255,255,0.2); }
+[data-theme="dark"] .carousel-dot.active { background: #fff; }
+
