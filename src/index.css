@@ -1817,15 +1817,18 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  padding: 0 16px;
+  gap: 12px;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.2,0,0,1);
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-sizing: border-box;
 }
 .workflow-node:hover {
   transform: scale(1.05);
@@ -1836,15 +1839,15 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 6px;
 }
 .workflow-node-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   color: rgba(255,255,255,0.8);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 /* Base Light Theme */

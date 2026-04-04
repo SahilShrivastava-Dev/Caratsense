@@ -884,16 +884,16 @@ const SCENARIOS = [
     label: "Phishing Analysis (urlscan.io & VirusTotal)",
     description: "Automated alert triage via URLScan.io and VirusTotal.",
     nodes: [
-      { id: "n1", label: "Webhook", iconUrl: "https://cdn.simpleicons.org/n8n/FF6D5A", x: 100, y: 130 },
-      { id: "n2", label: "urlscan.io", iconUrl: "https://cdn.simpleicons.org/googlechrome/4285F4", x: 300, y: 65 },
-      { id: "n3", label: "VirusTotal", iconUrl: "https://cdn.simpleicons.org/virustotal/394EFF", x: 300, y: 195 },
-      { id: "n4", label: "Slack", iconUrl: "https://cdn.simpleicons.org/slack/4A154B", x: 500, y: 130 },
+      { id: "n1", label: "Webhook", iconUrl: "https://cdn.simpleicons.org/n8n/FF6D5A", x: 140, y: 130 },
+      { id: "n2", label: "urlscan.io", iconUrl: "https://cdn.simpleicons.org/googlechrome/4285F4", x: 400, y: 65 },
+      { id: "n3", label: "VirusTotal", iconUrl: "https://cdn.simpleicons.org/virustotal/394EFF", x: 400, y: 195 },
+      { id: "n4", label: "Slack", iconUrl: "https://cdn.simpleicons.org/slack/4A154B", x: 660, y: 130 },
     ],
     paths: [
-      { id: "p1", d: "M 140 130 C 200 130, 200 65, 260 65" },
-      { id: "p2", d: "M 140 130 C 200 130, 200 195, 260 195" },
-      { id: "p3", d: "M 340 65 C 400 65, 400 130, 460 130" },
-      { id: "p4", d: "M 340 195 C 400 195, 400 130, 460 130" }
+      { id: "p1", d: "M 210 130 C 270 130, 270 65, 330 65" },
+      { id: "p2", d: "M 210 130 C 270 130, 270 195, 330 195" },
+      { id: "p3", d: "M 470 65 C 530 65, 530 130, 590 130" },
+      { id: "p4", d: "M 470 195 C 530 195, 530 130, 590 130" }
     ],
     signals: [
       { pathId: "p1", delay: 0, dur: 1.5, color: "#a078e6" },
@@ -907,15 +907,15 @@ const SCENARIOS = [
     label: "Lead Enrichment",
     description: "Enrich form submissions using Clearbit before pushing to Salesforce.",
     nodes: [
-      { id: "n1", label: "Typeform", iconUrl: "https://cdn.simpleicons.org/typeform/111111", x: 100, y: 130 },
+      { id: "n1", label: "Typeform", iconUrl: "https://cdn.simpleicons.org/typeform/111111", x: 120, y: 130 },
       { id: "n2", label: "Clearbit", iconUrl: "https://cdn.simpleicons.org/clearbit/26B9BA", x: 300, y: 130 },
-      { id: "n3", label: "Salesforce", iconUrl: "https://cdn.simpleicons.org/salesforce/00A1E0", x: 500, y: 130 },
-      { id: "n4", label: "Gmail", iconUrl: "https://cdn.simpleicons.org/gmail/EA4335", x: 700, y: 130 }
+      { id: "n3", label: "Salesforce", iconUrl: "https://cdn.simpleicons.org/salesforce/00A1E0", x: 480, y: 130 },
+      { id: "n4", label: "Gmail", iconUrl: "https://cdn.simpleicons.org/gmail/EA4335", x: 660, y: 130 }
     ],
     paths: [
-      { id: "p1", d: "M 140 130 L 260 130" },
-      { id: "p2", d: "M 340 130 L 460 130" },
-      { id: "p3", d: "M 540 130 L 660 130" }
+      { id: "p1", d: "M 190 130 L 230 130" },
+      { id: "p2", d: "M 370 130 L 410 130" },
+      { id: "p3", d: "M 550 130 L 590 130" }
     ],
     signals: [
       { pathId: "p1", delay: 0, dur: 1.2, color: "#00e5ff" },
@@ -928,16 +928,16 @@ const SCENARIOS = [
     label: "Automated Onboarding",
     description: "Provision Jira, Google Workspace, and Teams on Stripe purchase.",
     nodes: [
-      { id: "n1", label: "Stripe", iconUrl: "https://cdn.simpleicons.org/stripe/008CDD", x: 100, y: 130 },
-      { id: "n2", label: "Jira", iconUrl: "https://cdn.simpleicons.org/jira/0052CC", x: 300, y: 65 },
-      { id: "n3", label: "Workspace", iconUrl: "https://cdn.simpleicons.org/googleworkspace/4285F4", x: 300, y: 195 },
-      { id: "n4", label: "Teams", iconUrl: "https://cdn.simpleicons.org/microsoftteams/6264A7", x: 500, y: 130 }
+      { id: "n1", label: "Stripe", iconUrl: "https://cdn.simpleicons.org/stripe/008CDD", x: 140, y: 130 },
+      { id: "n2", label: "Jira", iconUrl: "https://cdn.simpleicons.org/jira/0052CC", x: 400, y: 65 },
+      { id: "n3", label: "Workspace", iconUrl: "https://cdn.simpleicons.org/googleworkspace/4285F4", x: 400, y: 195 },
+      { id: "n4", label: "Teams", iconUrl: "https://cdn.simpleicons.org/microsoftteams/6264A7", x: 660, y: 130 }
     ],
     paths: [
-      { id: "p1", d: "M 140 130 C 200 130, 200 65, 260 65" },
-      { id: "p2", d: "M 140 130 C 200 130, 200 195, 260 195" },
-      { id: "p3", d: "M 340 65 C 400 65, 400 130, 460 130" },
-      { id: "p4", d: "M 340 195 C 400 195, 400 130, 460 130" }
+      { id: "p1", d: "M 210 130 C 270 130, 270 65, 330 65" },
+      { id: "p2", d: "M 210 130 C 270 130, 270 195, 330 195" },
+      { id: "p3", d: "M 470 65 C 530 65, 530 130, 590 130" },
+      { id: "p4", d: "M 470 195 C 530 195, 530 130, 590 130" }
     ],
     signals: [
       { pathId: "p1", delay: 0, dur: 1.5, color: "#d4af37" },
@@ -957,7 +957,7 @@ const WorkflowShowcase = () => {
   const scen = SCENARIOS[activeIdx];
 
   return (
-    <section className="workflows-section fade-in" id="workflows">
+    <section className="workflows-section" id="workflows">
        <div className="section-header" style={{ textAlign: 'center', marginBottom: 40, marginTop: 40 }}>
          <p className="section-label">Enterprise Integrations</p>
          <h2 className="section-title">Automate Every Valuation Workflow</h2>
@@ -968,16 +968,16 @@ const WorkflowShowcase = () => {
            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
          </button>
 
-         <div className="workflow-card fade-in" key={scen.id}>
-           <div className="workflow-card-header">
+         <div className="workflow-card">
+           <div className="workflow-card-header" key={`h-${scen.id}`}>
              <h3 className="workflow-card-title">{scen.label}</h3>
              <p className="workflow-card-desc">{scen.description}</p>
            </div>
            
            <div className="workflow-canvas-wrap">
-             <svg viewBox="0 0 800 260" className="workflow-svg">
+             <svg viewBox="0 0 800 260" className="workflow-svg" key={`svg-${scen.id}`}>
                <defs>
-                 <filter id="glow-sig" x="-50%" y="-50%" width="200%" height="200%">
+                 <filter id={`glow-sig-${scen.id}`} x="-50%" y="-50%" width="200%" height="200%">
                    <feGaussianBlur stdDeviation="3" result="blur" />
                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
                  </filter>
@@ -998,7 +998,7 @@ const WorkflowShowcase = () => {
                ))}
 
                {scen.signals.map((sig, i) => (
-                  <circle key={i} r="4.5" fill={sig.color} filter="url(#glow-sig)">
+                  <circle key={`sig-${i}`} r="4.5" fill={sig.color} filter={`url(#glow-sig-${scen.id})`}>
                     <animateMotion 
                       dur={`${sig.dur}s`} 
                       repeatCount="indefinite"
@@ -1010,10 +1010,10 @@ const WorkflowShowcase = () => {
                ))}
                
                {scen.nodes.map(n => (
-                 <foreignObject key={n.id} x={n.x - 40} y={n.y - 40} width="80" height="80" style={{ overflow: 'visible' }}>
+                 <foreignObject key={n.id} x={n.x - 70} y={n.y - 24} width="140" height="48" style={{ overflow: 'visible' }}>
                    <div className="workflow-node" xmlns="http://www.w3.org/1999/xhtml">
                      <div className="workflow-node-icon">
-                       <img src={n.iconUrl} alt={n.label} width="24" height="24" style={{ display: 'block' }} />
+                       <img src={n.iconUrl} alt={n.label} width="20" height="20" style={{ display: 'block' }} />
                      </div>
                      <div className="workflow-node-label">{n.label}</div>
                    </div>
