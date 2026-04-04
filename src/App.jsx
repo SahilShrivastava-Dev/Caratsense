@@ -248,6 +248,235 @@ const Starfield = () => {
   return <canvas ref={canvasRef} className="particles-canvas starfield" />;
 };
 
+// ── Neural Network Canvas ──────────────────────────────────────
+// An interactive, multi-layer neural network that pulses with the
+// cursor. Nodes activate on hover; signals propagate layer-by-layer.
+const NeuralNetworkCanvas = () => {
+  const canvasRef = useRef(null);
+  const stateRef  = useRef({ mouse: { x: -9999, y: -9999 }, raf: null });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // ── Network architecture: [input, h1, h2, h3, output] ──────
+    const ARCH         = [6, 9, 9, 7, 3];
+    const NODE_R       = 7;
+    const PAD_X        = 100;  // left/right padding
+    const PAD_Y        = 48;   // top/bottom padding
+
+    // Per-layer colors [r,g,b]
+    const LAYER_COL = [
+      [212, 175,  55],  // gold  — Input
+      [160, 120, 230],  // purple
+      [ 80, 150, 230],  // blue
+      [ 40, 200, 190],  // teal
+      [  0, 229, 180],  // mint  — Output
+    ];
+
+    let nodes = [];
+    let edges = [];
+    let nextSpike = Date.now() + 400;
+
+    // ── Build node + edge arrays ──────────────────────────────
+    const build = () => {
+      const W = canvas.width  = canvas.offsetWidth;
+      const H = canvas.height = canvas.offsetHeight;
+      nodes = []; edges = [];
+
+      const layerX = ARCH.map((_, li) =>
+        PAD_X + (li / (ARCH.length - 1)) * (W - PAD_X * 2));
+
+      ARCH.forEach((count, li) => {
+        const x = layerX[li];
+        for (let ni = 0; ni < count; ni++) {
+          const y = count === 1
+            ? H / 2
+            : PAD_Y + (ni / (count - 1)) * (H - PAD_Y * 2);
+          nodes.push({ x, y, layer: li, activity: 0, glow: 0 });
+        }
+      });
+
+      // Full connections between adjacent layers
+      for (let li = 0; li < ARCH.length - 1; li++) {
+        const from = nodes.filter(n => n.layer === li);
+        const to   = nodes.filter(n => n.layer === li + 1);
+        from.forEach(f => to.forEach(t =>
+          edges.push({ from: f, to: t, pulses: [] })
+        ));
+      }
+    };
+
+    build();
+
+    const onResize = () => build();
+    window.addEventListener('resize', onResize);
+
+    // ── Mouse tracking (relative to canvas) ──────────────────
+    const onMouse = e => {
+      const r = canvas.getBoundingClientRect();
+      stateRef.current.mouse = { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    window.addEventListener('mousemove', onMouse);
+
+    // ── Trigger a node: set activity + spawn pulses ───────────
+    const fire = (node, strength = 1) => {
+      node.activity = Math.min(1, node.activity + strength);
+      node.glow     = Math.min(1, node.glow     + strength);
+      edges
+        .filter(e => e.from === node)
+        .forEach(e => e.pulses.push({
+          t: 0,
+          speed: 0.007 + Math.random() * 0.007,
+          col: LAYER_COL[node.layer],
+          str: strength,
+        }));
+    };
+
+    // ── Main draw loop ─────────────────────────────────────────
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const { mouse } = stateRef.current;
+      const now = Date.now();
+
+      // Random input spike to keep animation alive
+      if (now > nextSpike) {
+        const inputs = nodes.filter(n => n.layer === 0);
+        fire(inputs[Math.floor(Math.random() * inputs.length)],
+             0.6 + Math.random() * 0.4);
+        nextSpike = now + 500 + Math.random() * 700;
+      }
+
+      // Cursor proximity on input + first hidden layer
+      nodes.forEach(n => {
+        if (n.layer > 1) return;
+        const dx = n.x - mouse.x, dy = n.y - mouse.y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d < 90) {
+          const s = (1 - d / 90) * 0.35;
+          n.activity = Math.min(1, n.activity + s);
+          n.glow     = Math.min(1, n.glow     + s * 0.9);
+          if (Math.random() < 0.07) fire(n, s * 2.5);
+        }
+      });
+
+      // Decay node states
+      nodes.forEach(n => { n.activity *= 0.91; n.glow *= 0.87; });
+
+      // ── Draw edges + advance pulses ─────────────────────────
+      edges.forEach(({ from, to, pulses }) => {
+        const act = Math.max(from.activity, to.activity);
+
+        // Edge line
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x,   to.y);
+        ctx.strokeStyle = `rgba(100,140,200,${0.06 + act * 0.16})`;
+        ctx.lineWidth   = 0.7 + act * 1.2;
+        ctx.stroke();
+
+        // Pulses
+        for (let i = pulses.length - 1; i >= 0; i--) {
+          const p = pulses[i];
+          p.t += p.speed;
+
+          if (p.t >= 1) {
+            // Arrived — activate destination
+            to.activity = Math.min(1, to.activity + p.str * 0.6);
+            to.glow     = Math.min(1, to.glow     + p.str * 0.75);
+            // Propagate to next layer (probabilistic)
+            if (to.layer < ARCH.length - 1) {
+              edges
+                .filter(e => e.from === to && Math.random() < 0.65)
+                .forEach(e => e.pulses.push({
+                  t: 0,
+                  speed: 0.006 + Math.random() * 0.008,
+                  col: LAYER_COL[to.layer],
+                  str: p.str * 0.78,
+                }));
+            }
+            pulses.splice(i, 1);
+            continue;
+          }
+
+          // Draw pulse glow orb
+          const px = from.x + (to.x - from.x) * p.t;
+          const py = from.y + (to.y - from.y) * p.t;
+          const [r, g, b] = p.col;
+          const alpha = Math.sin(p.t * Math.PI) * p.str;
+
+          const g1 = ctx.createRadialGradient(px, py, 0, px, py, 14);
+          g1.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.85})`);
+          g1.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.beginPath(); ctx.arc(px, py, 14, 0, Math.PI * 2);
+          ctx.fillStyle = g1; ctx.fill();
+
+          ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, alpha * 2.2)})`;
+          ctx.fill();
+        }
+      });
+
+      // ── Draw nodes ─────────────────────────────────────────
+      nodes.forEach(n => {
+        const [r, g, b] = LAYER_COL[n.layer];
+        const { activity: act, glow } = n;
+
+        // Outer glow
+        if (glow > 0.04) {
+          const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, NODE_R * 5 + glow * 22);
+          gr.addColorStop(0, `rgba(${r},${g},${b},${glow * 0.45})`);
+          gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R * 5 + glow * 22, 0, Math.PI * 2);
+          ctx.fillStyle = gr; ctx.fill();
+        }
+
+        // Node body gradient
+        const nb = ctx.createRadialGradient(n.x - 2, n.y - 2, 1, n.x, n.y, NODE_R);
+        nb.addColorStop(0, `rgba(${r},${g},${b},${0.35 + act * 0.65})`);
+        nb.addColorStop(1, `rgba(${r},${g},${b},${0.08 + act * 0.25})`);
+        ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R, 0, Math.PI * 2);
+        ctx.fillStyle = nb; ctx.fill();
+
+        // Ring
+        ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.3 + act * 0.65})`;
+        ctx.lineWidth   = 1 + act * 1.5;
+        ctx.stroke();
+      });
+
+      stateRef.current.raf = requestAnimationFrame(draw);
+    };
+
+    // Only animate when the canvas is on screen
+    const obs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        if (!stateRef.current.raf) draw();
+      } else {
+        cancelAnimationFrame(stateRef.current.raf);
+        stateRef.current.raf = null;
+      }
+    }, { threshold: 0.05 });
+    obs.observe(canvas);
+    draw();
+
+    return () => {
+      cancelAnimationFrame(stateRef.current.raf);
+      window.removeEventListener('mousemove', onMouse);
+      window.removeEventListener('resize', onResize);
+      obs.disconnect();
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: '100%', height: '100%', display: 'block' }}
+    />
+  );
+};
+
 // ── Mock UI Components (Interactive) ──────────────────────────
 
 
@@ -860,6 +1089,44 @@ export default function App() {
               </a>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── NEURAL NETWORK ── */}
+      <section className="nn-section" id="howitworks">
+        <div className="container">
+          <div className="section-header fade-in" style={{ textAlign: 'center', marginBottom: 0 }}>
+            <span className="section-label">Under the Hood</span>
+            <h2 className="section-title">Real-time AI Signal Processing</h2>
+            <p className="section-desc" style={{ maxWidth: 560, margin: '16px auto 0' }}>
+              Move your cursor into the network to activate pathways. Each node
+              represents a stage in Caratsense's multi-layer estimation engine,
+              from raw gemstone data through certified market valuation.
+            </p>
+          </div>
+        </div>
+
+        <div className="nn-canvas-wrap fade-in">
+          <NeuralNetworkCanvas />
+          <div className="nn-labels">
+            {['Input Data', 'Feature Extraction', 'Pattern Match', 'Calibration', 'Valuation'].map((l, i) => (
+              <span key={i} className="nn-label">{l}</span>
+            ))}
+          </div>
+        </div>
+
+        <div className="nn-chips fade-in">
+          {[
+            { icon: '⚡', text: 'Sub-2s inference' },
+            { icon: '🔗', text: '5-layer deep network' },
+            { icon: '📡', text: 'Live market sync' },
+            { icon: '🛡️', text: 'GIA-certified output' },
+          ].map(({ icon, text }) => (
+            <div key={text} className="nn-chip">
+              <span className="nn-chip-icon">{icon}</span>
+              <span className="nn-chip-text">{text}</span>
+            </div>
+          ))}
         </div>
       </section>
 

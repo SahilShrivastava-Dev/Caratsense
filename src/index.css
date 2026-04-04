@@ -1624,3 +1624,99 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
 }
 /* Don't transition transforms (breaks animations) */
 
+/* =================== NEURAL NETWORK SECTION =================== */
+.nn-section {
+  background: var(--bg-dark);
+  padding: var(--section-padding) 0 calc(var(--section-padding) * 0.55);
+  overflow: hidden;
+}
+
+.nn-section .section-label { color: var(--accent-gold); }
+.nn-section .section-title { color: #ffffff; }
+.nn-section .section-desc  { color: rgba(255,255,255,0.48); }
+
+/* Full-width canvas with fixed height */
+.nn-canvas-wrap {
+  position: relative;
+  width: 100%;
+  max-width: var(--content-max);
+  margin: 52px auto 0;
+  height: 380px;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 1440px) { .nn-canvas-wrap { height: 440px; } }
+@media (max-width: 768px)  { .nn-canvas-wrap { height: 250px; margin-top: 32px; } }
+
+/* Layer label row aligned to each column */
+.nn-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 100px;
+  margin-top: 14px;
+  max-width: var(--content-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.nn-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.22);
+  text-align: center;
+  flex: 1;
+}
+
+/* Chips row */
+.nn-chips {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 40px;
+  padding: 0 24px;
+}
+
+.nn-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 100px;
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(8px);
+  cursor: default;
+  transition: border-color 0.25s, background 0.25s, transform 0.2s;
+}
+
+.nn-chip:hover {
+  border-color: rgba(212,175,55,0.4);
+  background: rgba(212,175,55,0.07);
+  transform: translateY(-1px);
+}
+
+.nn-chip-icon { font-size: 15px; line-height: 1; }
+
+.nn-chip-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: rgba(255,255,255,0.58);
+}
+
+/* Invert theme tweaks */
+[data-theme="invert"] .nn-chip {
+  border-color: rgba(0,229,255,0.15);
+  background: rgba(0,229,255,0.04);
+}
+[data-theme="invert"] .nn-chip:hover {
+  border-color: rgba(0,229,255,0.4);
+  background: rgba(0,229,255,0.09);
+}
+[data-theme="invert"] .nn-label     { color: rgba(0,229,255,0.3); }
+[data-theme="invert"] .nn-chip-text { color: rgba(255,255,255,0.65); }
+
