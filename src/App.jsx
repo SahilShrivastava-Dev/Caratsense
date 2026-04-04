@@ -1069,6 +1069,162 @@ const Nav = () => {
   );
 };
 
+// ── Workflow Showcase ──────────────────────────────────────────
+const SCENARIOS = [
+  {
+    id: "scen-1",
+    label: "Intelligent Intake",
+    description: "Automated ingestion pipeline for incoming appraisal requests.",
+    nodes: [
+      { id: "n1", label: "Salesforce", icon: "☁️", x: 100, y: 65 },
+      { id: "n2", label: "CSV Export", icon: "📄", x: 100, y: 195 },
+      { id: "n3", label: "Azure DB", icon: "🔷", x: 300, y: 130 },
+      { id: "n4", label: "Gemini", icon: "✨", x: 500, y: 130 },
+      { id: "n5", label: "Databricks", icon: "🧱", x: 700, y: 130 }
+    ],
+    paths: [
+      { id: "p1", d: "M 140 65 C 200 65, 200 130, 260 130" },
+      { id: "p2", d: "M 140 195 C 200 195, 200 130, 260 130" },
+      { id: "p3", d: "M 340 130 L 460 130" },
+      { id: "p4", d: "M 540 130 L 660 130" }
+    ],
+    signals: [
+      { pathId: "p1", delay: 0, dur: 1.5, color: "#00e5ff" },
+      { pathId: "p1", delay: 1, dur: 1.5, color: "#00e5ff" },
+      { pathId: "p2", delay: 0.5, dur: 1.5, color: "#d4af37" },
+      { pathId: "p3", delay: 0, dur: 1.2, color: "#ffffff" },
+      { pathId: "p3", delay: 0.8, dur: 1.2, color: "#ffffff" },
+      { pathId: "p4", delay: 0.2, dur: 1.5, color: "#a078e6" },
+      { pathId: "p4", delay: 1.2, dur: 1.5, color: "#a078e6" }
+    ]
+  },
+  {
+    id: "scen-2",
+    label: "Market Data Sync",
+    description: "Real-time harmonization of global bid/ask prices via Snowflake.",
+    nodes: [
+      { id: "n1", label: "Snowflake", icon: "❄️", x: 100, y: 130 },
+      { id: "n2", label: "Hadoop", icon: "🐘", x: 300, y: 65 },
+      { id: "n3", label: "Claude", icon: "🧠", x: 300, y: 195 },
+      { id: "n4", label: "Caratsense API", icon: "💎", x: 500, y: 130 },
+      { id: "n5", label: "Live Dashboard", icon: "📈", x: 700, y: 130 }
+    ],
+    paths: [
+      { id: "p1", d: "M 140 130 C 200 130, 200 65, 260 65" },
+      { id: "p2", d: "M 140 130 C 200 130, 200 195, 260 195" },
+      { id: "p3", d: "M 340 65 C 400 65, 400 130, 460 130" },
+      { id: "p4", d: "M 340 195 C 400 195, 400 130, 460 130" },
+      { id: "p5", d: "M 540 130 L 660 130" }
+    ],
+    signals: [
+      { pathId: "p1", delay: 0, dur: 2, color: "#00e5ff" },
+      { pathId: "p2", delay: 0.5, dur: 2, color: "#d4af37" },
+      { pathId: "p3", delay: 1.0, dur: 1.8, color: "#a078e6" },
+      { pathId: "p4", delay: 1.5, dur: 1.8, color: "#ffffff" },
+      { pathId: "p5", delay: 2.0, dur: 1.5, color: "#00e5ff" }
+    ]
+  },
+  {
+    id: "scen-3",
+    label: "Enterprise Distribution",
+    description: "Multi-modal load balancing for parallel valuation pipelines.",
+    nodes: [
+      { id: "n1", label: "API Gateway", icon: "⚖️", x: 100, y: 130 },
+      { id: "n2", label: "GPT-4 Proxy", icon: "🟢", x: 300, y: 130 },
+      { id: "n3", label: "DynamoDB", icon: "🧩", x: 500, y: 65 },
+      { id: "n4", label: "ServiceNow", icon: "⚙️", x: 500, y: 195 },
+      { id: "n5", label: "Client ERP", icon: "🏢", x: 700, y: 130 }
+    ],
+    paths: [
+      { id: "p1", d: "M 140 130 L 260 130" },
+      { id: "p2", d: "M 340 130 C 400 130, 400 65, 460 65" },
+      { id: "p3", d: "M 340 130 C 400 130, 400 195, 460 195" },
+      { id: "p4", d: "M 540 65 C 600 65, 600 130, 660 130" },
+      { id: "p5", d: "M 540 195 C 600 195, 600 130, 660 130" }
+    ],
+    signals: [
+      { pathId: "p1", delay: 0, dur: 1.2, color: "#ffffff" },
+      { pathId: "p2", delay: 0.6, dur: 1.5, color: "#00e5ff" },
+      { pathId: "p3", delay: 0.8, dur: 1.5, color: "#d4af37" },
+      { pathId: "p4", delay: 1.4, dur: 1.2, color: "#00e5ff" },
+      { pathId: "p5", delay: 1.6, dur: 1.2, color: "#a078e6" }
+    ]
+  }
+];
+
+const WorkflowShowcase = () => {
+  return (
+    <section className="workflows-section fade-in" id="workflows">
+       <div className="section-header" style={{ textAlign: 'center', marginBottom: 40, marginTop: 40 }}>
+         <p className="section-label">Enterprise Integrations</p>
+         <h2 className="section-title">Automate Every Valuation Workflow</h2>
+         <p className="section-desc" style={{ maxWidth: 640, margin: '16px auto 0' }}>
+           Connect Caratsense to your existing infrastructure. We support seamless bi-directional data pipelines via REST APIs, webhooks, and major enterprise data warehouses.
+         </p>
+       </div>
+       
+       <div className="workflow-scroller">
+         <div className="workflow-scroller-inner">
+           {SCENARIOS.map((scen, idx) => (
+             <div key={scen.id} className="workflow-card fade-in" style={{ animationDelay: `${idx * 0.15}s` }}>
+               <div className="workflow-card-header">
+                 <h3 className="workflow-card-title">{scen.label}</h3>
+                 <p className="workflow-card-desc">{scen.description}</p>
+               </div>
+               
+               <div className="workflow-canvas-wrap">
+                 <svg viewBox="0 0 800 260" className="workflow-svg">
+                   <defs>
+                     <filter id="glow-sig" x="-50%" y="-50%" width="200%" height="200%">
+                       <feGaussianBlur stdDeviation="3" result="blur" />
+                       <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                     </filter>
+                     {scen.paths.map(p => (
+                       <path key={`def-${p.id}`} id={`${scen.id}-${p.id}`} d={p.d} fill="none" />
+                     ))}
+                   </defs>
+                   
+                   {scen.paths.map(p => (
+                     <path 
+                       key={p.id} 
+                       d={p.d} 
+                       stroke="rgba(150, 160, 180, 0.25)" 
+                       strokeWidth="2" 
+                       strokeDasharray="4 4" 
+                       fill="none" 
+                     />
+                   ))}
+
+                   {scen.signals.map((sig, i) => (
+                      <circle key={i} r="4.5" fill={sig.color} filter="url(#glow-sig)">
+                        <animateMotion 
+                          dur={`${sig.dur}s`} 
+                          repeatCount="indefinite"
+                          begin={`${sig.delay}s`}
+                        >
+                          <mpath href={`#${scen.id}-${sig.pathId}`} />
+                        </animateMotion>
+                      </circle>
+                   ))}
+                   
+                   {scen.nodes.map(n => (
+                     <foreignObject key={n.id} x={n.x - 40} y={n.y - 40} width="80" height="80" style={{ overflow: 'visible' }}>
+                       <div className="workflow-node" xmlns="http://www.w3.org/1999/xhtml">
+                         <div className="workflow-node-icon">{n.icon}</div>
+                         <div className="workflow-node-label">{n.label}</div>
+                       </div>
+                     </foreignObject>
+                   ))}
+                 </svg>
+               </div>
+             </div>
+           ))}
+         </div>
+       </div>
+    </section>
+  );
+};
+
 // ── Scroll-fade hook ───────────────────────────────────────────
 const useFadeIn = () => {
   useEffect(() => {
@@ -1128,6 +1284,9 @@ export default function App() {
           <div className="scroll-line" />
         </div>
       </section>
+      
+      {/* ── WORKFLOWS ── */}
+      <WorkflowShowcase />
 
       {/* ── LOGOS ── */}
       <div className="logos">
