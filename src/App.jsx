@@ -12,151 +12,290 @@ const GemMark = ({ size = 28 }) => (
   </svg>
 );
 
-// ── Cursor-reactive colored dot field + glow ───────────────────
-// Dots colored by proximity: gold at ~0–80px, blue at ~80–200px,
-// neutral gray beyond. A smooth lerped radial gradient spotlight
-// trails the cursor, mimicking the antigravity.google effect.
+// ── Neural Background — physics-driven neuron simulation ────────
+// Free-floating neurons with Brownian drift, cursor repulsion,
+// proximity synaptic connections, & signal pulse propagation.
+// Scroll triggers cascade activations sweeping the network.
 
-const CursorDotField = () => {
+const NeuralBg = () => {
   const canvasRef = useRef(null);
-  const mouseRef  = useRef({ x: -9999, y: -9999 });
   const glowRef   = useRef(null);
-  // Lerped position for the smooth glow div
-  const lerpRef   = useRef({ x: -9999, y: -9999 });
+  const stateRef  = useRef({
+    mouse:   { x: -9999, y: -9999 },
+    lerpPos: { x: -9999, y: -9999 },
+    scroll:  0,
+    raf:     null,
+    triggered: new Set(),
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const glowEl = glowRef.current;
     if (!canvas || !glowEl) return;
-    const ctx = canvas.getContext('2d');
-    let animId;
 
-    // ── Mouse tracking ──────────────────────────────────────────
-    const onMouseMove = (e) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mousemove', onMouseMove);
+    const ctx      = canvas.getContext('2d');
+    const N        = 100;      // neuron count
+    const CONN     = 150;      // max synapse draw distance (px)
+    const REPEL_R  = 140;      // cursor repel radius
 
-    // ── Grid constants ──────────────────────────────────────────
-    const SPACING      = 36;
-    const RADIUS       = 1.5;
-    const INFLUENCE    = 160;   // repulsion radius
-    const COLOR_INNER  = 80;    // gold zone radius
-    const COLOR_MID    = 200;   // blue zone radius
-    const MAX_PUSH     = 30;
-    const RETURN_SPEED = 0.055;
-    const DAMPING      = 0.70;
+    let neurons = [];   // physics particles
+    let signals = [];   // traveling pulses
 
-    let dots = [];
-
-    const buildGrid = () => {
+    // ── Init / Resize ──────────────────────────────────────────
+    const init = () => {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
-      const cols = Math.ceil(canvas.width  / SPACING) + 1;
-      const rows = Math.ceil(canvas.height / SPACING) + 1;
-      dots = [];
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          dots.push({ ox: c * SPACING, oy: r * SPACING,
-                      x:  c * SPACING,  y: r * SPACING,
-                      vx: 0, vy: 0 });
+      const W = canvas.width, H = canvas.height;
+      neurons = Array.from({ length: N }, () => ({
+        x:  Math.random() * W,
+        y:  Math.random() * H,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        r:  1.8 + Math.random() * 2.2,   // visual radius
+        phase: Math.random() * Math.PI * 2,
+        activity: 0,
+        glow: 0,
+      }));
+      signals = [];
+    };
+    init();
+    window.addEventListener('resize', init);
+
+    // ── Mouse tracking ──────────────────────────────────────────
+    const onMouse = e => {
+      stateRef.current.mouse = { x: e.clientX, y: e.clientY };
+    };
+    window.addEventListener('mousemove', onMouse);
+
+    // ── Scroll tracking & threshold cascades ────────────────────
+    const onScroll = () => {
+      const docH  = document.documentElement.scrollHeight - window.innerHeight;
+      const ratio = docH > 0 ? window.scrollY / docH : 0;
+      stateRef.current.scroll = ratio;
+      // Wave cascades at key scroll depths
+      [0.04, 0.18, 0.38, 0.60, 0.82].forEach((thresh, i) => {
+        if (!stateRef.current.triggered.has(i) && ratio >= thresh) {
+          stateRef.current.triggered.add(i);
+          cascadeWave();
+        }
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // ── Fire a neuron ────────────────────────────────────────────
+    const fire = (n, str = 1) => {
+      n.activity = Math.min(1, n.activity + str);
+      n.glow     = Math.min(1, n.glow     + str);
+    };
+
+    // ── Spawn a signal pulse to a random nearby neuron ───────────
+    const spawnSignal = (from, strength = 1) => {
+      // pick a close neighbour
+      let best = null, bestD = Infinity;
+      for (let k = 0; k < neurons.length; k++) {
+        if (neurons[k] === from) continue;
+        const dx = neurons[k].x - from.x, dy = neurons[k].y - from.y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d < CONN && d < bestD && Math.random() < 0.6) {
+          bestD = d; best = neurons[k];
         }
       }
+      if (!best) return;
+      signals.push({
+        from, to: best,
+        t: 0,
+        speed: 0.010 + Math.random() * 0.012,
+        // gold or teal signal
+        col: Math.random() < 0.55 ? [212, 175, 55] : [0, 220, 180],
+        str: strength,
+      });
     };
 
-    buildGrid();
-    window.addEventListener('resize', buildGrid);
+    // ── Cascade: sweep activations left → right ──────────────────
+    const cascadeWave = () => {
+      const sorted = [...neurons].sort((a, b) => a.x - b.x);
+      sorted.forEach((n, i) => {
+        const delay = i * 9 + Math.random() * 15;
+        setTimeout(() => {
+          fire(n, 0.7 + Math.random() * 0.3);
+          spawnSignal(n, 0.9);
+        }, delay);
+      });
+    };
 
-    // ── Color helper: lerp between two RGBA arrays ──────────────
-    const lerpColor = (a, b, t) =>
-      a.map((v, i) => v + (b[i] - v) * t);
+    // ── Main draw loop ───────────────────────────────────────────
+    let lastT   = performance.now();
+    let nextAuto = Date.now() + 600;
 
-    // Neutral, blue, gold colours as [r,g,b,a]
-    const COL_NEUTRAL = [100, 120, 160, 0.18];
-    const COL_BLUE    = [ 70, 120, 220, 0.55];
-    const COL_GOLD    = [212, 175,  55, 0.75];
+    const draw = (ts) => {
+      const dt = Math.min(32, ts - lastT) / 16;
+      lastT = ts;
 
-    // ── Main animation loop ─────────────────────────────────────
-    const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const W = canvas.width, H = canvas.height;
+      const { mouse, scroll } = stateRef.current;
 
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
+      // Energy ramps with scroll (min 0.3, max 2.0)
+      const energy = 0.3 + scroll * 1.7;
 
-      // Smooth lerp of the glow div toward cursor
+      // Glow div — smooth lerp
       const LERP = 0.08;
-      lerpRef.current.x += (mx - lerpRef.current.x) * LERP;
-      lerpRef.current.y += (my - lerpRef.current.y) * LERP;
-      const gx = lerpRef.current.x;
-      const gy = lerpRef.current.y;
+      const lp = stateRef.current.lerpPos;
+      lp.x += (mouse.x - lp.x) * LERP;
+      lp.y += (mouse.y - lp.y) * LERP;
+      if (lp.x > -9000) glowEl.style.opacity = '1';
+      glowEl.style.setProperty('--gx', `${lp.x}px`);
+      glowEl.style.setProperty('--gy', `${lp.y}px`);
 
-      // Update glow div center via CSS custom properties
-      glowEl.style.setProperty('--gx', `${gx}px`);
-      glowEl.style.setProperty('--gy', `${gy}px`);
-      // Fade in once cursor has moved
-      if (gx > -9000) glowEl.style.opacity = '1';
+      // Random ambient spike
+      if (Date.now() > nextAuto) {
+        const n = neurons[Math.floor(Math.random() * neurons.length)];
+        fire(n, 0.4 + Math.random() * 0.5);
+        spawnSignal(n, 0.7);
+        nextAuto = Date.now() + 400 + Math.random() * 700;
+      }
 
-      // Draw dots
-      dots.forEach(d => {
-        // Spring to origin
-        d.vx += (d.ox - d.x) * RETURN_SPEED;
-        d.vy += (d.oy - d.y) * RETURN_SPEED;
-        d.vx *= DAMPING;
-        d.vy *= DAMPING;
-
-        const cdx  = d.x - mx;
-        const cdy  = d.y - my;
-        const dist = Math.sqrt(cdx * cdx + cdy * cdy);
-
-        // Repulsion
-        if (dist < INFLUENCE && dist > 0) {
-          const force = (1 - dist / INFLUENCE);
-          const push  = force * MAX_PUSH;
-          d.vx += (cdx / dist) * push * 0.20;
-          d.vy += (cdy / dist) * push * 0.20;
+      // ── Update neurons ─────────────────────────────────────────
+      neurons.forEach(n => {
+        // Cursor repulsion
+        const dx = n.x - mouse.x, dy = n.y - mouse.y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d < REPEL_R && d > 0) {
+          const f = ((1 - d / REPEL_R) ** 1.5) * 2.8;
+          n.vx += (dx / d) * f * dt;
+          n.vy += (dy / d) * f * dt;
+          fire(n, (1 - d / REPEL_R) * 0.10 * dt);
+          if (Math.random() < 0.025 * (1 - d / REPEL_R)) spawnSignal(n, 0.8);
         }
 
-        d.x += d.vx;
-        d.y += d.vy;
+        // Soft wall force (pushes inward)
+        const WALL = 60;
+        if (n.x < WALL)   n.vx += (WALL  - n.x)       * 0.012 * dt;
+        if (n.x > W-WALL) n.vx -= (n.x - (W - WALL))  * 0.012 * dt;
+        if (n.y < WALL)   n.vy += (WALL  - n.y)        * 0.012 * dt;
+        if (n.y > H-WALL) n.vy -= (n.y - (H - WALL))  * 0.012 * dt;
 
-        // Color by distance
-        let col;
-        if (dist < COLOR_INNER) {
-          const t = dist / COLOR_INNER;
-          col = lerpColor(COL_GOLD, COL_BLUE, t);
-        } else if (dist < COLOR_MID) {
-          const t = (dist - COLOR_INNER) / (COLOR_MID - COLOR_INNER);
-          col = lerpColor(COL_BLUE, COL_NEUTRAL, t);
-        } else {
-          col = COL_NEUTRAL;
-        }
+        // Brownian drift
+        n.vx += (Math.random() - 0.5) * 0.06 * dt;
+        n.vy += (Math.random() - 0.5) * 0.06 * dt;
 
-        const r = Math.round(col[0]);
-        const g = Math.round(col[1]);
-        const b = Math.round(col[2]);
-        const a = col[3];
+        // Speed cap (energy-scaled)
+        const spd = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
+        const cap = 0.6 + energy * 0.55;
+        if (spd > cap) { n.vx = (n.vx/spd)*cap; n.vy = (n.vy/spd)*cap; }
 
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
-        ctx.fill();
+        // Damping
+        n.vx *= 0.975;
+        n.vy *= 0.975;
+
+        n.x += n.vx * dt;
+        n.y += n.vy * dt;
+
+        // Breathing phase
+        n.phase += 0.018 * dt;
+        // Decay
+        n.activity *= 0.92;
+        n.glow     *= 0.88;
       });
 
-      animId = requestAnimationFrame(draw);
+      // ── Draw synaptic connections ──────────────────────────────
+      // (Only check unique pairs — O(n²/2). At N=100, ≈5000 pairs.)
+      const connAlphaBase = 0.05 + scroll * 0.10;
+      for (let i = 0; i < neurons.length; i++) {
+        const a = neurons[i];
+        for (let j = i + 1; j < neurons.length; j++) {
+          const b   = neurons[j];
+          const ddx = b.x - a.x, ddy = b.y - a.y;
+          const dd  = Math.sqrt(ddx*ddx + ddy*ddy);
+          if (dd > CONN) continue;
+          const alpha = (1 - dd / CONN) * connAlphaBase;
+          const act   = Math.max(a.activity, b.activity);
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(80, 120, 200, ${alpha + act * 0.18})`;
+          ctx.lineWidth   = 0.55 + act * 1.1;
+          ctx.stroke();
+        }
+      }
+
+      // ── Draw & advance signals ─────────────────────────────────
+      signals = signals.filter(s => s.t < 1.0);
+      for (let i = signals.length - 1; i >= 0; i--) {
+        const s = signals[i];
+        s.t += s.speed * dt;
+        if (s.t >= 1.0) {
+          fire(s.to, s.str * 0.6);
+          if (Math.random() < 0.45) spawnSignal(s.to, s.str * 0.75);
+          continue;
+        }
+        const px = s.from.x + (s.to.x - s.from.x) * s.t;
+        const py = s.from.y + (s.to.y - s.from.y) * s.t;
+        const [r, g, b] = s.col;
+        const alpha = Math.sin(s.t * Math.PI) * s.str;
+
+        // Glow orb
+        const g1 = ctx.createRadialGradient(px, py, 0, px, py, 12);
+        g1.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.85})`);
+        g1.addColorStop(1, `rgba(${r},${g},${b},0)`);
+        ctx.beginPath(); ctx.arc(px, py, 12, 0, Math.PI*2);
+        ctx.fillStyle = g1; ctx.fill();
+        // Core dot
+        ctx.beginPath(); ctx.arc(px, py, 2.8, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, alpha * 2.2)})`;
+        ctx.fill();
+      }
+
+      // ── Draw neurons ───────────────────────────────────────────
+      neurons.forEach(n => {
+        const act   = n.activity;
+        const pulse = 0.5 + 0.5 * Math.sin(n.phase);
+        const glow  = n.glow;
+
+        // Color: dark blue-gray → gold as activity rises
+        const r  = Math.round(50  + act * 162);   // 50 → 212
+        const gr = Math.round(70  + act * 105);   // 70 → 175
+        const bl = Math.round(120 - act * 65);    // 120 → 55
+
+        // Outer glow halo
+        if (glow > 0.04) {
+          const hr  = n.r * 5 + glow * 18;
+          const hg  = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, hr);
+          hg.addColorStop(0, `rgba(${r},${gr},${bl},${glow * 0.40})`);
+          hg.addColorStop(1, `rgba(${r},${gr},${bl},0)`);
+          ctx.beginPath(); ctx.arc(n.x, n.y, hr, 0, Math.PI*2);
+          ctx.fillStyle = hg; ctx.fill();
+        }
+
+        // Node body
+        const nr = n.r * (1 + pulse * 0.18 + act * 0.35);
+        ctx.beginPath(); ctx.arc(n.x, n.y, nr, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(${r},${gr},${bl},${0.35 + act * 0.55 + pulse * (0.08 + scroll * 0.07)})`;
+        ctx.fill();
+
+        // Thin ring
+        ctx.beginPath(); ctx.arc(n.x, n.y, nr * 2.0, 0, Math.PI*2);
+        ctx.strokeStyle = `rgba(${r},${gr},${bl},${(0.06 + act * 0.18) * (0.4 + scroll * 0.6)})`;
+        ctx.lineWidth   = 0.7;
+        ctx.stroke();
+      });
+
+      stateRef.current.raf = requestAnimationFrame(draw);
     };
 
-    draw();
+    stateRef.current.raf = requestAnimationFrame(draw);
 
     return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('resize', buildGrid);
+      cancelAnimationFrame(stateRef.current.raf);
+      window.removeEventListener('mousemove', onMouse);
+      window.removeEventListener('resize', init);
+      window.removeEventListener('scroll', onScroll);
     };
   }, []);
 
   return (
     <>
-      {/* Colored dot canvas */}
+      {/* Physics neuron canvas */}
       <canvas
         ref={canvasRef}
         style={{
@@ -186,7 +325,7 @@ const CursorDotField = () => {
         }}
       />
 
-      {/* Static edge aura — soft blue inner glow around viewport edges */}
+      {/* Static edge aura */}
       <div
         style={{
           position: 'fixed', top: 0, left: 0,
@@ -955,7 +1094,7 @@ export default function App() {
   return (
     <>
       {/* Cursor effects + FABs — outside the invertable zone */}
-      <CursorDotField />
+      <NeuralBg />
       <FloatingButtons theme={theme} setTheme={setTheme} />
 
       {/* All page content — CSS inverts this in 'invert' theme */}
@@ -1092,43 +1231,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── NEURAL NETWORK ── */}
-      <section className="nn-section" id="howitworks">
-        <div className="container">
-          <div className="section-header fade-in" style={{ textAlign: 'center', marginBottom: 0 }}>
-            <span className="section-label">Under the Hood</span>
-            <h2 className="section-title">Real-time AI Signal Processing</h2>
-            <p className="section-desc" style={{ maxWidth: 560, margin: '16px auto 0' }}>
-              Move your cursor into the network to activate pathways. Each node
-              represents a stage in Caratsense's multi-layer estimation engine,
-              from raw gemstone data through certified market valuation.
-            </p>
-          </div>
-        </div>
-
-        <div className="nn-canvas-wrap fade-in">
-          <NeuralNetworkCanvas />
-          <div className="nn-labels">
-            {['Input Data', 'Feature Extraction', 'Pattern Match', 'Calibration', 'Valuation'].map((l, i) => (
-              <span key={i} className="nn-label">{l}</span>
-            ))}
-          </div>
-        </div>
-
-        <div className="nn-chips fade-in">
-          {[
-            { icon: '⚡', text: 'Sub-2s inference' },
-            { icon: '🔗', text: '5-layer deep network' },
-            { icon: '📡', text: 'Live market sync' },
-            { icon: '🛡️', text: 'GIA-certified output' },
-          ].map(({ icon, text }) => (
-            <div key={text} className="nn-chip">
-              <span className="nn-chip-icon">{icon}</span>
-              <span className="nn-chip-text">{text}</span>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* ── TRUST ── */}
       <section className="trust">
