@@ -878,72 +878,101 @@ const Nav = () => {
 };
 
 // ── Workflow Showcase ──────────────────────────────────────────
+// ── Workflow Showcase ──────────────────────────────────────────
 const SCENARIOS = [
   {
     id: "scen-1",
-    label: "Phishing Analysis (urlscan.io & VirusTotal)",
-    description: "Automated alert triage via URLScan.io and VirusTotal.",
+    label: "Advanced RAG Chatbot Engine",
+    description: "Multi-model orchestration fetching vector context and logging via Databricks.",
     nodes: [
-      { id: "n1", label: "Webhook", iconUrl: "https://cdn.simpleicons.org/n8n/FF6D5A", x: 140, y: 130 },
-      { id: "n2", label: "urlscan.io", iconUrl: "https://cdn.simpleicons.org/googlechrome/4285F4", x: 400, y: 65 },
-      { id: "n3", label: "VirusTotal", iconUrl: "https://cdn.simpleicons.org/virustotal/394EFF", x: 400, y: 195 },
-      { id: "n4", label: "Slack", iconUrl: "https://cdn.simpleicons.org/slack/4A154B", x: 660, y: 130 },
+      { id: "n1", label: "Client App", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/n8n.svg", x: 120, y: 170 },
+      { id: "n2", label: "Router", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/python.svg", x: 300, y: 170 },
+      { id: "n3", label: "Embedding", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/openai.svg", x: 480, y: 80 },
+      { id: "n4", label: "Vector DB", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/supabase.svg", x: 660, y: 80 },
+      { id: "n5", label: "LLM Core", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/claude.svg", x: 480, y: 260 },
+      { id: "n6", label: "Analytics", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/databricks.svg", x: 860, y: 80 },
+      { id: "n7", label: "Zendesk", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/zendesk.svg", x: 860, y: 260 }
     ],
     paths: [
-      { id: "p1", d: "M 210 130 C 270 130, 270 65, 330 65" },
-      { id: "p2", d: "M 210 130 C 270 130, 270 195, 330 195" },
-      { id: "p3", d: "M 470 65 C 530 65, 530 130, 590 130" },
-      { id: "p4", d: "M 470 195 C 530 195, 530 130, 590 130" }
+      { id: "p1", d: "M 190 170 L 230 170", type: "solid" },
+      { id: "p2", d: "M 370 170 C 410 170, 410 80, 410 80", type: "solid" },
+      { id: "p3", d: "M 370 170 C 410 170, 410 260, 410 260", type: "solid" },
+      { id: "p4", d: "M 550 80 L 590 80", type: "solid" },
+      { id: "p5", d: "M 730 80 C 780 80, 780 260, 550 260", type: "dash" }, /* Context injection */
+      { id: "p6", d: "M 730 80 L 790 80", type: "solid" },
+      { id: "p7", d: "M 550 260 C 700 260, 700 80, 790 80", type: "dash" }, /* Telemetry */
+      { id: "p8", d: "M 550 260 L 790 260", type: "solid" }
     ],
     signals: [
-      { pathId: "p1", delay: 0, dur: 1.5, color: "#a078e6" },
-      { pathId: "p2", delay: 0.2, dur: 1.5, color: "#a078e6" },
-      { pathId: "p3", delay: 1.5, dur: 1.5, color: "#d4af37" },
-      { pathId: "p4", delay: 1.7, dur: 1.5, color: "#d4af37" }
+      { pathId: "p1", delay: 0, dur: 1.0, color: "#00e5ff", type: "dot" },
+      { pathId: "p2", delay: 1.0, dur: 1.0, color: "#a078e6", type: "dot" },
+      { pathId: "p3", delay: 1.0, dur: 1.0, color: "#a078e6", type: "dot" },
+      { pathId: "p4", delay: 2.0, dur: 1.0, color: "#00e5ff", type: "dot" },
+      { pathId: "p5", delay: 2.5, dur: 2.0, color: "#d4af37", type: "stream" },
+      { pathId: "p6", delay: 3.5, dur: 1.5, color: "#ffffff", type: "dot" },
+      { pathId: "p7", delay: 3.0, dur: 1.5, color: "#ffffff", type: "dot" },
+      { pathId: "p8", delay: 4.5, dur: 1.5, color: "#00e5ff", type: "stream" }
     ]
   },
   {
     id: "scen-2",
-    label: "Lead Enrichment",
-    description: "Enrich form submissions using Clearbit before pushing to Salesforce.",
+    label: "Salesforce Invoice Processing",
+    description: "Automate invoice data extraction using AWS Textract and ingest to accounting.",
     nodes: [
-      { id: "n1", label: "Typeform", iconUrl: "https://cdn.simpleicons.org/typeform/111111", x: 120, y: 130 },
-      { id: "n2", label: "Clearbit", iconUrl: "https://cdn.simpleicons.org/clearbit/26B9BA", x: 300, y: 130 },
-      { id: "n3", label: "Salesforce", iconUrl: "https://cdn.simpleicons.org/salesforce/00A1E0", x: 480, y: 130 },
-      { id: "n4", label: "Gmail", iconUrl: "https://cdn.simpleicons.org/gmail/EA4335", x: 660, y: 130 }
+      { id: "n1", label: "Intake", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/gmail.svg", x: 120, y: 170 },
+      { id: "n2", label: "Document AI", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/amazonaws.svg", x: 300, y: 170 },
+      { id: "n3", label: "Validation", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/python.svg", x: 480, y: 170 },
+      { id: "n4", label: "Salesforce", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/salesforce.svg", x: 660, y: 80 },
+      { id: "n5", label: "Quickbooks", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/quickbooks.svg", x: 660, y: 260 },
+      { id: "n6", label: "Alerting", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/slack.svg", x: 860, y: 170 }
     ],
     paths: [
-      { id: "p1", d: "M 190 130 L 230 130" },
-      { id: "p2", d: "M 370 130 L 410 130" },
-      { id: "p3", d: "M 550 130 L 590 130" }
+      { id: "p1", d: "M 190 170 L 230 170", type: "solid" },
+      { id: "p2", d: "M 370 170 L 410 170", type: "solid" },
+      { id: "p3", d: "M 550 170 C 590 170, 590 80, 590 80", type: "solid" },
+      { id: "p4", d: "M 550 170 C 590 170, 590 260, 590 260", type: "solid" },
+      { id: "p5", d: "M 730 80 C 780 80, 780 170, 790 170", type: "dash" },
+      { id: "p6", d: "M 730 260 C 780 260, 780 170, 790 170", type: "dash" }
     ],
     signals: [
-      { pathId: "p1", delay: 0, dur: 1.2, color: "#00e5ff" },
-      { pathId: "p2", delay: 1.2, dur: 1.2, color: "#d4af37" },
-      { pathId: "p3", delay: 2.4, dur: 1.2, color: "#a078e6" }
+      { pathId: "p1", delay: 0, dur: 1.0, color: "#d4af37", type: "dot" },
+      { pathId: "p2", delay: 1.0, dur: 1.5, color: "#00e5ff", type: "dot" },
+      { pathId: "p3", delay: 2.5, dur: 1.0, color: "#a078e6", type: "stream" },
+      { pathId: "p4", delay: 2.5, dur: 1.0, color: "#a078e6", type: "stream" },
+      { pathId: "p5", delay: 3.5, dur: 1.5, color: "#ffffff", type: "dot" },
+      { pathId: "p6", delay: 3.5, dur: 1.5, color: "#ffffff", type: "dot" }
     ]
   },
   {
     id: "scen-3",
-    label: "Automated Onboarding",
-    description: "Provision Jira, Google Workspace, and Teams on Stripe purchase.",
+    label: "Autonomous RPA Agent",
+    description: "Headless browser scraping pipelined directly to Sheets and Jira tracking.",
     nodes: [
-      { id: "n1", label: "Stripe", iconUrl: "https://cdn.simpleicons.org/stripe/008CDD", x: 140, y: 130 },
-      { id: "n2", label: "Jira", iconUrl: "https://cdn.simpleicons.org/jira/0052CC", x: 400, y: 65 },
-      { id: "n3", label: "Workspace", iconUrl: "https://cdn.simpleicons.org/googleworkspace/4285F4", x: 400, y: 195 },
-      { id: "n4", label: "Teams", iconUrl: "https://cdn.simpleicons.org/microsoftteams/6264A7", x: 660, y: 130 }
+      { id: "n1", label: "Scheduler", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/n8n.svg", x: 120, y: 170 },
+      { id: "n2", label: "Agent LLM", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/claude.svg", x: 300, y: 170 },
+      { id: "n3", label: "Scraper", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/robotframework.svg", x: 480, y: 80 },
+      { id: "n4", label: "Processing", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/python.svg", x: 480, y: 260 },
+      { id: "n5", label: "Data Sink", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/googlesheets.svg", x: 660, y: 80 },
+      { id: "n6", label: "Ticketing", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/jira.svg", x: 660, y: 260 },
+      { id: "n7", label: "Reporting", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/slack.svg", x: 860, y: 170 }
     ],
     paths: [
-      { id: "p1", d: "M 210 130 C 270 130, 270 65, 330 65" },
-      { id: "p2", d: "M 210 130 C 270 130, 270 195, 330 195" },
-      { id: "p3", d: "M 470 65 C 530 65, 530 130, 590 130" },
-      { id: "p4", d: "M 470 195 C 530 195, 530 130, 590 130" }
+      { id: "p1", d: "M 190 170 L 230 170", type: "solid" },
+      { id: "p2", d: "M 370 170 C 410 170, 410 80, 410 80", type: "solid" },
+      { id: "p3", d: "M 550 80 C 600 80, 600 260, 410 260", type: "dash" },
+      { id: "p4", d: "M 550 80 L 590 80", type: "solid" },
+      { id: "p5", d: "M 550 260 L 590 260", type: "solid" },
+      { id: "p6", d: "M 730 80 C 780 80, 780 170, 790 170", type: "dash" },
+      { id: "p7", d: "M 730 260 C 780 260, 780 170, 790 170", type: "dash" }
     ],
     signals: [
-      { pathId: "p1", delay: 0, dur: 1.5, color: "#d4af37" },
-      { pathId: "p2", delay: 0.2, dur: 1.5, color: "#d4af37" },
-      { pathId: "p3", delay: 1.5, dur: 1.5, color: "#00e5ff" },
-      { pathId: "p4", delay: 1.7, dur: 1.5, color: "#00e5ff" }
+      { pathId: "p1", delay: 0, dur: 1.0, color: "#d4af37", type: "dot" },
+      { pathId: "p2", delay: 1.0, dur: 1.0, color: "#00e5ff", type: "dot" },
+      { pathId: "p3", delay: 2.0, dur: 1.5, color: "#a078e6", type: "stream" },
+      { pathId: "p4", delay: 2.0, dur: 1.0, color: "#00e5ff", type: "stream" },
+      { pathId: "p5", delay: 3.5, dur: 1.0, color: "#ffffff", type: "dot" },
+      { pathId: "p6", delay: 3.0, dur: 1.5, color: "#d4af37", type: "dot" },
+      { pathId: "p7", delay: 4.5, dur: 1.5, color: "#d4af37", type: "dot" }
     ]
   }
 ];
@@ -958,80 +987,96 @@ const WorkflowShowcase = () => {
 
   return (
     <section className="workflows-section" id="workflows">
-       <div className="section-header" style={{ textAlign: 'center', marginBottom: 40, marginTop: 40 }}>
-         <p className="section-label">Enterprise Integrations</p>
-         <h2 className="section-title">Automate Every Valuation Workflow</h2>
-       </div>
-       
-       <div className="workflow-carousel-wrap">
-         <button className="carousel-btn left" onClick={prev}>
-           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
-         </button>
+       <div className="workflow-animated-container fade-in">
+         <div className="section-header" style={{ textAlign: 'center', marginBottom: 40, marginTop: 40 }}>
+           <p className="section-label">Enterprise Integrations</p>
+           <h2 className="section-title">Architect Complex Pipelines</h2>
+         </div>
+         
+         <div className="workflow-carousel-wrap">
+           <button className="carousel-btn left" onClick={prev}>
+             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+           </button>
 
-         <div className="workflow-card">
-           <div className="workflow-card-header" key={`h-${scen.id}`}>
-             <h3 className="workflow-card-title">{scen.label}</h3>
-             <p className="workflow-card-desc">{scen.description}</p>
-           </div>
-           
-           <div className="workflow-canvas-wrap">
-             <svg viewBox="0 0 800 260" className="workflow-svg" key={`svg-${scen.id}`}>
-               <defs>
-                 <filter id={`glow-sig-${scen.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                   <feGaussianBlur stdDeviation="3" result="blur" />
-                   <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                 </filter>
+           <div className="workflow-card">
+             <div className="workflow-card-header" key={`h-${scen.id}`}>
+               <h3 className="workflow-card-title">{scen.label}</h3>
+               <p className="workflow-card-desc">{scen.description}</p>
+             </div>
+             
+             <div className="workflow-canvas-wrap">
+               <svg viewBox="0 0 1000 340" className="workflow-svg" key={`svg-${scen.id}`}>
+                 <defs>
+                   <filter id={`glow-sig-${scen.id}`} x="-50%" y="-50%" width="200%" height="200%">
+                     <feGaussianBlur stdDeviation="4" result="blur" />
+                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                   </filter>
+                 </defs>
+                 
                  {scen.paths.map(p => (
-                   <path key={`def-${p.id}`} id={`${scen.id}-${p.id}`} d={p.d} fill="none" />
+                   <path 
+                     key={p.id} 
+                     id={`${scen.id}-${p.id}`}
+                     d={p.d} 
+                     className={`workflow-path workflow-path-${p.type}`}
+                     stroke={p.type === 'dash' ? "rgba(180, 190, 220, 0.6)" : "rgba(150, 160, 180, 0.4)"} 
+                     strokeWidth="2"
+                     fill="none"
+                   />
                  ))}
-               </defs>
-               
-               {scen.paths.map(p => (
-                 <path 
-                   key={p.id} 
-                   d={p.d} 
-                   stroke="rgba(150, 160, 180, 0.4)" 
-                   strokeWidth="2" 
-                   strokeDasharray="4 4" 
-                   fill="none" 
-                 />
-               ))}
 
-               {scen.signals.map((sig, i) => (
-                  <circle key={`sig-${i}`} r="4.5" fill={sig.color} filter={`url(#glow-sig-${scen.id})`}>
-                    <animateMotion 
-                      dur={`${sig.dur}s`} 
-                      repeatCount="indefinite"
-                      begin={`${sig.delay}s`}
-                    >
-                      <mpath href={`#${scen.id}-${sig.pathId}`} />
-                    </animateMotion>
-                  </circle>
-               ))}
-               
-               {scen.nodes.map(n => (
-                 <foreignObject key={n.id} x={n.x - 70} y={n.y - 24} width="140" height="48" style={{ overflow: 'visible' }}>
-                   <div className="workflow-node" xmlns="http://www.w3.org/1999/xhtml">
-                     <div className="workflow-node-icon">
-                       <img src={n.iconUrl} alt={n.label} width="20" height="20" style={{ display: 'block' }} />
+                 {scen.signals.map((sig, i) => {
+                    const renderCircle = (offsetDelay, idxKey, sizeMultiplier) => (
+                      <circle key={`sig-${i}-${idxKey}`} r={4.5 * sizeMultiplier} fill={sig.color} filter={`url(#glow-sig-${scen.id})`}>
+                        <animateMotion 
+                          dur={`${sig.dur}s`} 
+                          repeatCount="indefinite"
+                          begin={`${sig.delay + offsetDelay}s`}
+                        >
+                          <mpath href={`#${scen.id}-${sig.pathId}`} />
+                        </animateMotion>
+                      </circle>
+                    );
+
+                    if (sig.type === 'stream') {
+                      return (
+                        <g key={`stream-${i}`}>
+                          {renderCircle(0, 0, 0.8)}
+                          {renderCircle(0.15, 1, 0.8)}
+                          {renderCircle(0.30, 2, 0.8)}
+                        </g>
+                      );
+                    }
+                    if (sig.type === 'dot') {
+                       return renderCircle(0, 0, 1.0);
+                    }
+                    return null;
+                 })}
+                 
+                 {scen.nodes.map(n => (
+                   <foreignObject key={n.id} x={n.x - 70} y={n.y - 24} width="140" height="48" style={{ overflow: 'visible' }}>
+                     <div className="workflow-node" xmlns="http://www.w3.org/1999/xhtml">
+                       <div className="workflow-node-icon">
+                         <img className="workflow-node-logo" src={n.iconUrl} alt={n.label} width="20" height="20" />
+                       </div>
+                       <div className="workflow-node-label">{n.label}</div>
                      </div>
-                     <div className="workflow-node-label">{n.label}</div>
-                   </div>
-                 </foreignObject>
-               ))}
-             </svg>
+                   </foreignObject>
+                 ))}
+               </svg>
+             </div>
            </div>
+
+           <button className="carousel-btn right" onClick={next}>
+             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
+           </button>
          </div>
 
-         <button className="carousel-btn right" onClick={next}>
-           <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
-         </button>
-       </div>
-
-       <div className="carousel-dots">
-         {SCENARIOS.map((_, i) => (
-           <span key={i} className={`carousel-dot ${i === activeIdx ? 'active' : ''}`} onClick={() => setActiveIdx(i)} />
-         ))}
+         <div className="carousel-dots">
+           {SCENARIOS.map((_, i) => (
+             <span key={i} className={`carousel-dot ${i === activeIdx ? 'active' : ''}`} onClick={() => setActiveIdx(i)} />
+           ))}
+         </div>
        </div>
     </section>
   );
