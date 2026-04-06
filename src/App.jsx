@@ -31,13 +31,18 @@ const TechEcosystemBg = () => {
   useEffect(() => {
     // Initialize node state separate from react state for speed
     // We add a unique ref id to handle duplicated tech IDs in physics mapping
+    // Grid-based initial placement so nodes start evenly spread
+    const cols = Math.ceil(Math.sqrt(ICONS.length * (window.innerWidth / window.innerHeight)));
+    const rows = Math.ceil(ICONS.length / cols);
+    const cellW = window.innerWidth / cols;
+    const cellH = window.innerHeight / rows;
     let nodes = ICONS.map((id, index) => ({
       id,
       refId: `${id}_${index}`,
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      vx: (Math.random() - 0.5) * 1.5,
-      vy: (Math.random() - 0.5) * 1.5,
+      x: (index % cols) * cellW + cellW * 0.2 + Math.random() * cellW * 0.6,
+      y: Math.floor(index / cols) * cellH + cellH * 0.2 + Math.random() * cellH * 0.6,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: (Math.random() - 0.5) * 0.5,
     }));
 
     const init = () => {}; // Placeholder if you still want a resize listener logic
@@ -49,35 +54,39 @@ const TechEcosystemBg = () => {
     const draw = () => {
       const W = window.innerWidth, H = window.innerHeight;
       const { mouse } = stateRef.current;
-      
+
       const svgEl = window.__ACTIVE_WORKFLOW_SVG_ID ? document.getElementById(window.__ACTIVE_WORKFLOW_SVG_ID) : null;
       let structuredMode = false;
       let targetMap = {};
-      
+      // rect/scale exposed so locked nodes can recompute position every frame
+      let svgRect = null, scaleX = 1, scaleY = 1;
+
       if (svgEl) {
-        const rect = svgEl.getBoundingClientRect();
-        // Latch structured mode so they don't bounce off when scrolling fast past it
-        if (rect.top < H * 0.75) {
+        svgRect = svgEl.getBoundingClientRect();
+        scaleX = svgRect.width / 1000;
+        scaleY = svgRect.height / 340;
+        // Trigger convergence as soon as workflow comes into view
+        if (svgRect.top < H * 0.9) {
           stateRef.current.hasTriggeredWorkflow = true;
         }
-        // Release the latch if the user scrolls all the way back UP to the hero section
-        // so the floating particles gracefully return to welcome them!
-        if (rect.top > H * 0.85) {
+        // Only release when user scrolls fully back to the very top
+        if (svgRect.top > H * 1.1) {
           stateRef.current.hasTriggeredWorkflow = false;
         }
         if (stateRef.current.hasTriggeredWorkflow) {
           structuredMode = true;
           const activeNodes = window.__ACTIVE_SCENARIO_NODES || [];
-          const scaleX = rect.width / 1000;
-          const scaleY = rect.height / 340;
-          
-          activeNodes.forEach(n => {
-            const tId = n.iconUrl.split('/').pop().replace('.svg', '');
+          activeNodes.forEach(sn => {
+            const tId = sn.iconUrl.split('/').pop().replace('.svg', '');
             targetMap[tId] = {
-              x: rect.left + n.x * scaleX,
-              y: rect.top + n.y * scaleY - 3, // slightly offset to match exact old alignment
-              label: n.label,
-              assigned: false // to ensure we only target one duplicate
+              // Screen coords for this frame (used during approach lerp)
+              x: svgRect.left + sn.x * scaleX,
+              y: svgRect.top + sn.y * scaleY - 3,
+              // SVG-space coords stored so locked nodes recompute from rect every frame
+              svgX: sn.x,
+              svgY: sn.y,
+              label: sn.label,
+              assigned: false
             };
           });
         }
@@ -87,33 +96,72 @@ const TechEcosystemBg = () => {
          let target = null;
          if (structuredMode && targetMap[n.id] && !targetMap[n.id].assigned) {
              target = targetMap[n.id];
-             targetMap[n.id].assigned = true; // Claim this single floating icon!
+             targetMap[n.id].assigned = true;
          }
-         
-         if (structuredMode && target) {
+
+         // If node is locked to a slot, recompute its position directly from the
+         // current SVG rect every frame — moves perfectly with the workflow on scroll.
+         // If svgRect is temporarily null (e.g. carousel transition), freeze in place.
+         if (n.locked) {
+             if (svgRect) {
+               n.x = svgRect.left + n.targetSvgX * scaleX;
+               n.y = svgRect.top  + n.targetSvgY * scaleY - 3;
+             }
+             // Always zero velocity — never let a locked node drift
+             n.vx = 0;
+             n.vy = 0;
+         } else if (structuredMode && target) {
              const el = nodeRefs.current[i];
-             const isLocked = el && el.classList.contains('structured');
-             
-             if (isLocked) {
-                 // Hard lock so fast scrolling doesn't break physics distance threshold
+             const dx = target.x - n.x;
+             const dy = target.y - n.y;
+             const dist = Math.sqrt(dx * dx + dy * dy);
+
+             if (dist < 6) {
+                 // Lock: store SVG-space offset so future frames derive position from rect
+                 n.locked = true;
+                 n.targetSvgX = target.svgX;
+                 n.targetSvgY = target.svgY;
                  n.x = target.x;
                  n.y = target.y;
                  n.vx = 0;
                  n.vy = 0;
+                 if (el) {
+                   // Kill CSS transitions while locked — prevents width/shape animation on scroll
+                   el.style.transition = 'none';
+                   if (!el.classList.contains('structured')) {
+                     const lbl = el.querySelector('.tech-node-label');
+                     if (lbl) lbl.textContent = target.label;
+                     el.classList.remove('floating');
+                     el.classList.add('structured');
+                   }
+                 }
              } else {
-                 const dx = target.x - n.x;
-                 const dy = target.y - n.y;
-                 // Cinematic, observable merging physics
-                 n.vx += dx * 0.0035; 
-                 n.vy += dy * 0.0035;
-                 n.vx *= 0.90; // Less dampening = smoother, slower slide
-                 n.vy *= 0.90;
+                 // Fast lerp approach — no velocity accumulation, no overshoot
+                 const LERP = 0.22;
+                 n.x += dx * LERP;
+                 n.y += dy * LERP;
+                 n.vx = 0;
+                 n.vy = 0;
              }
          } else {
            // Normal Brownian floating for ALL unassigned nodes regardless of structuredMode
-           n.vx += (Math.random() - 0.5) * 0.06;
-           n.vy += (Math.random() - 0.5) * 0.06;
-           
+           n.vx += (Math.random() - 0.5) * 0.04;
+           n.vy += (Math.random() - 0.5) * 0.04;
+
+           // Node-to-node repulsion — keeps nodes from overlapping or clustering
+           const MIN_DIST = 140;
+           nodes.forEach((other, j) => {
+             if (j === i) return;
+             const rdx = n.x - other.x;
+             const rdy = n.y - other.y;
+             const rd = Math.sqrt(rdx * rdx + rdy * rdy);
+             if (rd < MIN_DIST && rd > 0) {
+               const rf = (1 - rd / MIN_DIST) * 0.6;
+               n.vx += (rdx / rd) * rf;
+               n.vy += (rdy / rd) * rf;
+             }
+           });
+
            // Cursor repel
            const mdx = n.x - mouse.x;
            const mdy = n.y - mouse.y;
@@ -123,16 +171,16 @@ const TechEcosystemBg = () => {
              n.vx += (mdx/md) * f;
              n.vy += (mdy/md) * f;
            }
-           
+
            const WALL = 40;
            if (n.x < WALL) n.vx += (WALL - n.x) * 0.02;
            if (n.x > W - WALL) n.vx -= (n.x - (W - WALL)) * 0.02;
            if (n.y < WALL) n.vy += (WALL - n.y) * 0.02;
            if (n.y > H - WALL) n.vy -= (n.y - (H - WALL)) * 0.02;
-           
+
            const spd = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
-           if (spd > 2.0) { n.vx = (n.vx/spd)*2.0; n.vy = (n.vy/spd)*2.0; }
-           n.vx *= 0.99; n.vy *= 0.99;
+           if (spd > 1.5) { n.vx = (n.vx/spd)*1.5; n.vy = (n.vy/spd)*1.5; }
+           n.vx *= 0.98; n.vy *= 0.98;
          }
          
          n.x += n.vx;
@@ -143,21 +191,12 @@ const TechEcosystemBg = () => {
          if (el) {
            el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) translate(-50%, -50%)`;
            
-           if (target) {
-             // Use larger distance threshold for structure claiming to make the styling pop smoothly
-             const distT = Math.sqrt(Math.pow(target.x - n.x, 2) + Math.pow(target.y - n.y, 2));
-             if (distT < 60 && !el.classList.contains('structured')) {
-                el.classList.remove('floating');
-                el.classList.add('structured');
-                const lbl = el.querySelector('.tech-node-label');
-                if (lbl) lbl.textContent = target.label;
-             }
-             // No fallback if distT >= 60 to protect against fast scroll tearing
-           } else {
-             if (el.classList.contains('structured')) {
-                el.classList.add('floating');
-                el.classList.remove('structured');
-             }
+           if (!structuredMode && el.classList.contains('structured')) {
+             n.locked = false;
+             // Restore transitions before animating back to floating circle
+             el.style.transition = '';
+             el.classList.add('floating');
+             el.classList.remove('structured');
            }
            
            // Opacity handling
@@ -175,7 +214,13 @@ const TechEcosystemBg = () => {
            el.style.opacity = newOp.toFixed(3);
          }
       });
-      
+
+      // Raise ecosystem above page-content when converging into workflow,
+      // drop back behind it when floating freely in the hero
+      const bgEl = document.getElementById('ecosystem-bg');
+      if (bgEl) {
+        bgEl.style.zIndex = structuredMode ? '2' : '0';
+      }
 
       stateRef.current.raf = requestAnimationFrame(draw);
     };
@@ -190,7 +235,7 @@ const TechEcosystemBg = () => {
   }, []);
 
   return (
-    <div id="ecosystem-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 50 }}>
+    <div id="ecosystem-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
       {/* Hardware-accelerated DOM layer for independent flying icon nodes */}
       {ICONS.map((id, i) => (
         <div key={`${id}_${i}`} ref={el => nodeRefs.current[i] = el} className="tech-node floating" style={{ opacity: 0 }}>
@@ -916,19 +961,19 @@ const Nav = () => {
   return (
     <nav className="nav" ref={navRef}>
       <a href="#" className="nav-logo">
-        <GemMark size={28} />
+        <img src="/logo.jpg" alt="CaratSense" className="nav-logo-img" />
         Caratsense
       </a>
       <div className="nav-links">
-        {['Product', 'Use Cases', 'Pricing', 'Blog', 'Docs'].map(l => (
-          <a key={l} href={`#${l.toLowerCase().replace(' ','')}`} className="nav-link">{l}</a>
+        {['What We Build', 'Industries', 'Engagements', 'Insights'].map(l => (
+          <a key={l} href={`#${l.toLowerCase().replace(/\s+/g,'')}`} className="nav-link">{l}</a>
         ))}
       </div>
       <div className="nav-actions">
-        <a href="#pricing" className="btn btn-ghost">Request Demo</a>
-        <a href="#pricing" className="btn btn-dark">
+        <a href="#whatwebuild" className="btn btn-ghost">See Our Work</a>
+        <a href="#engagements" className="btn btn-dark">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 8a5 5 0 1 1 10 0A5 5 0 0 1 3 8zm5-3.5a.5.5 0 0 0-1 0V8a.5.5 0 0 0 .146.354l2 2a.5.5 0 0 0 .708-.708L8 8.293V4.5z"/></svg>
-          Get Started
+          Work With Us
         </a>
       </div>
     </nav>
@@ -940,8 +985,8 @@ const Nav = () => {
 const SCENARIOS = [
   {
     id: "scen-1",
-    label: "Advanced RAG Chatbot Engine",
-    description: "Multi-model orchestration fetching vector context and logging via Databricks.",
+    label: "Tally / Busy Executive Dashboard",
+    description: "Live P&L, sales, and inventory data pulled from Tally or Busy into a real-time owner dashboard.",
     nodes: [
       { id: "n1", label: "Client App", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/n8n.svg", x: 120, y: 170 },
       { id: "n2", label: "Router", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/python.svg", x: 300, y: 170 },
@@ -974,8 +1019,8 @@ const SCENARIOS = [
   },
   {
     id: "scen-2",
-    label: "Salesforce Invoice Processing",
-    description: "Automate invoice data extraction using AWS Textract and ingest to accounting.",
+    label: "WhatsApp CRM & Order Bot",
+    description: "Automated lead capture, follow-up sequences, and order management — all running on WhatsApp.",
     nodes: [
       { id: "n1", label: "Intake", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/gmail.svg", x: 120, y: 170 },
       { id: "n2", label: "Document AI", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/amazonaws.svg", x: 300, y: 170 },
@@ -1003,8 +1048,8 @@ const SCENARIOS = [
   },
   {
     id: "scen-3",
-    label: "Autonomous RPA Agent",
-    description: "Headless browser scraping pipelined directly to Sheets and Jira tracking.",
+    label: "Inventory Intelligence Pipeline",
+    description: "ML-based aging detection and demand forecasting for jewellery, textiles, and building materials.",
     nodes: [
       { id: "n1", label: "Scheduler", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/n8n.svg", x: 120, y: 170 },
       { id: "n2", label: "Agent LLM", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/claude.svg", x: 300, y: 170 },
@@ -1066,8 +1111,8 @@ const WorkflowShowcase = () => {
     <section className="workflows-section" id="workflows">
        <div className="workflow-animated-container fade-in">
          <div className="section-header" style={{ textAlign: 'center', marginBottom: 40, marginTop: 40 }}>
-           <p className="section-label">Enterprise Integrations</p>
-           <h2 className="section-title">Architect Complex Pipelines</h2>
+           <p className="section-label">How We Build It</p>
+           <h2 className="section-title">Real systems. Real integrations.</h2>
          </div>
          
          <div className="workflow-carousel-wrap">
@@ -1150,6 +1195,281 @@ const WorkflowShowcase = () => {
   );
 };
 
+// ── DNN Visualization ──────────────────────────────────────────────────────
+
+const DNN_CANVAS_H = 560;
+const DNN_NODE_R   = 24;   // icon circle radius (px)
+const DNN_LAYER_X  = [0.10, 0.35, 0.65, 0.90]; // x as fraction of canvas width
+const DNN_ROW_GAP  = 86;   // vertical spacing between nodes in same layer
+
+const DNN_CFG = [
+  { id: 0, sublabel: 'Input Layer',   label: 'Data Sources',  color: '#a78bfa',
+    nodes: [
+      { icon: 'postgresql',    label: 'PostgreSQL' },
+      { icon: 'mongodb',       label: 'MongoDB'    },
+      { icon: 'elasticsearch', label: 'Elastic'    },
+      { icon: 'redis',         label: 'Redis'      },
+      { icon: 'amazonaws',     label: 'S3 / DWH'  },
+    ]},
+  { id: 1, sublabel: 'Processing',    label: 'ETL & Compute', color: '#818cf8',
+    nodes: [
+      { icon: 'python',      label: 'Python'     },
+      { icon: 'docker',      label: 'Docker'     },
+      { icon: 'kubernetes',  label: 'K8s'        },
+      { icon: 'databricks',  label: 'Databricks' },
+      { icon: 'n8n',         label: 'Pipelines'  },
+    ]},
+  { id: 2, sublabel: 'Intelligence',  label: 'AI / GNN Core', color: '#d4af37',
+    nodes: [
+      { icon: 'openai',      label: 'OpenAI'    },
+      { icon: 'claude',      label: 'Claude'    },
+      { icon: 'supabase',    label: 'Vector DB' },
+      { icon: 'googlecloud', label: 'GCP ML'    },
+      { icon: 'nodedotjs',   label: 'Runtime'   },
+    ]},
+  { id: 3, sublabel: 'Output Layer',  label: 'Delivery',      color: '#34d399',
+    nodes: [
+      { icon: 'react',        label: 'Dashboard' },
+      { icon: 'slack',        label: 'Alerts'    },
+      { icon: 'github',       label: 'Pipelines' },
+      { icon: 'stripe',       label: 'Payments'  },
+      { icon: 'googlesheets', label: 'Reports'   },
+    ]},
+];
+
+// Build flat node list
+const DNN_NODES = DNN_CFG.flatMap(layer =>
+  layer.nodes.map((n, row) => ({
+    id: `dnn-${layer.id}-${row}`,
+    layer: layer.id, row,
+    icon: n.icon, label: n.label, color: layer.color,
+  }))
+);
+const DNN_NODE_MAP = Object.fromEntries(DNN_NODES.map(n => [n.id, n]));
+
+// Build connections: each node → 2-3 nodes in next layer, spread by proximity
+const DNN_CONNS = (() => {
+  const byLayer = {};
+  DNN_NODES.forEach(n => { (byLayer[n.layer] = byLayer[n.layer] || []).push(n); });
+  const conns = [], seen = new Set();
+  [0, 1, 2].forEach(li => {
+    const from = byLayer[li] || [], to = byLayer[li + 1] || [];
+    if (!to.length) return;
+    from.forEach((f, fi) => {
+      const ratio = from.length > 1 ? fi / (from.length - 1) : 0.5;
+      const base  = Math.round(ratio * (to.length - 1));
+      const idxs  = new Set([
+        Math.max(0, base - 1), base, Math.min(to.length - 1, base + 1),
+        // one extra "long-range" link for the dense neural look
+        Math.floor(Math.random() * to.length),
+      ]);
+      idxs.forEach(ti => {
+        const key = `${f.id}>${to[ti].id}`;
+        if (!seen.has(key)) { seen.add(key); conns.push({ from: f.id, to: to[ti].id, color: f.color }); }
+      });
+    });
+  });
+  return conns;
+})();
+
+const dnnPos = (node, cw) => {
+  const count  = DNN_CFG[node.layer].nodes.length;
+  const totalH = (count - 1) * DNN_ROW_GAP;
+  const startY = (DNN_CANVAS_H - totalH) / 2;
+  return {
+    x: Math.round(cw * DNN_LAYER_X[node.layer]),
+    y: Math.round(startY + node.row * DNN_ROW_GAP),
+  };
+};
+
+const rgb = hex => `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}`;
+
+const DNNSection = () => {
+  const sectionRef  = useRef(null);
+  const canvasRef   = useRef(null);
+  const nodeEls     = useRef({});
+  const anim        = useRef({
+    triggered: false, elapsed: 0, lastTime: null, raf: null,
+    skeletonProg: 0,
+    nodeProgs: Object.fromEntries(DNN_NODES.map(n => [n.id, 0])),
+    scatter:    Object.fromEntries(DNN_NODES.map(n => [n.id, {
+      dx: (Math.random() - 0.5) * 680,
+      dy: (Math.random() - 0.5) * 460,
+    }])),
+    pulses: [],
+  });
+
+  // IntersectionObserver: fire animation once on enter
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && !anim.current.triggered) {
+        anim.current.triggered = true;
+        anim.current.lastTime  = null;
+      }
+    }, { threshold: 0.15 });
+    if (sectionRef.current) obs.observe(sectionRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  // Main animation loop
+  useEffect(() => {
+    const loop = ts => {
+      const s = anim.current;
+      s.raf = requestAnimationFrame(loop);
+      if (!s.triggered) return;
+
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      // Delta time
+      const dt = s.lastTime ? Math.min((ts - s.lastTime) / 1000, 0.05) : 0;
+      s.lastTime = ts;
+      s.elapsed += dt;
+
+      // Sync canvas resolution to CSS size
+      const cw = canvas.offsetWidth  || 1000;
+      const ch = canvas.offsetHeight || DNN_CANVAS_H;
+      if (canvas.width !== cw)  canvas.width  = cw;
+      if (canvas.height !== ch) canvas.height = ch;
+
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, cw, ch);
+
+      // ── Progress ────────────────────────────────────────────────
+      s.skeletonProg = Math.min(1, s.elapsed / 1.0); // skeleton draws in over 1 s
+
+      DNN_NODES.forEach(node => {
+        const start = 0.38 + node.layer * 0.22 + node.row * 0.045;
+        s.nodeProgs[node.id] = Math.min(1, Math.max(0, (s.elapsed - start) / 0.65));
+      });
+
+      // ── Pulses ──────────────────────────────────────────────────
+      if (s.elapsed > 1.1) {
+        s.pulses = s.pulses.filter(p => p.t <= 1.0);
+        s.pulses.forEach(p => { p.t += dt * p.speed; });
+        if (s.pulses.length < 20 && Math.random() < 0.25) {
+          const c = DNN_CONNS[Math.floor(Math.random() * DNN_CONNS.length)];
+          s.pulses.push({ from: c.from, to: c.to, color: c.color, t: 0, speed: 0.3 + Math.random() * 0.4 });
+        }
+      }
+
+      // ── Draw connections ────────────────────────────────────────
+      DNN_CONNS.forEach(conn => {
+        const f  = dnnPos(DNN_NODE_MAP[conn.from], cw);
+        const t  = dnnPos(DNN_NODE_MAP[conn.to],   cw);
+        const cx = (f.x + t.x) / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(f.x, f.y);
+        ctx.bezierCurveTo(cx, f.y, cx, t.y, t.x, t.y);
+        ctx.strokeStyle = `rgba(${rgb(conn.color)},${(s.skeletonProg * 0.22).toFixed(3)})`;
+        ctx.lineWidth   = 1;
+        ctx.shadowBlur  = 5;
+        ctx.shadowColor = `rgba(${rgb(conn.color)},0.4)`;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // ── Draw skeleton node circles (fade out as real icons arrive) ──
+      DNN_NODES.forEach(node => {
+        const pos   = dnnPos(node, cw);
+        const alpha = s.skeletonProg * Math.max(0, 1 - s.nodeProgs[node.id] * 2) * 0.45;
+        if (alpha < 0.01) return;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, DNN_NODE_R, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${rgb(node.color)},${alpha.toFixed(3)})`;
+        ctx.lineWidth   = 1.5;
+        ctx.shadowBlur  = 10;
+        ctx.shadowColor = `rgba(${rgb(node.color)},${(alpha * 0.6).toFixed(3)})`;
+        ctx.stroke();
+        ctx.restore();
+      });
+
+      // ── Draw pulses ─────────────────────────────────────────────
+      s.pulses.forEach(p => {
+        const f  = dnnPos(DNN_NODE_MAP[p.from], cw);
+        const t  = dnnPos(DNN_NODE_MAP[p.to],   cw);
+        const cx = (f.x + t.x) / 2, mt = 1 - p.t;
+        const px = mt*mt*mt*f.x + 3*mt*mt*p.t*cx + 3*mt*p.t*p.t*cx + p.t*p.t*p.t*t.x;
+        const py = mt*mt*mt*f.y + 3*mt*mt*p.t*f.y + 3*mt*p.t*p.t*t.y + p.t*p.t*p.t*t.y;
+        const op = Math.sin(Math.PI * p.t);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle  = `rgba(${rgb(p.color)},${(op * 0.9).toFixed(3)})`;
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = `rgba(${rgb(p.color)},${op.toFixed(3)})`;
+        ctx.fill();
+        ctx.restore();
+      });
+
+      // ── Animate DOM nodes ────────────────────────────────────────
+      DNN_NODES.forEach(node => {
+        const el = nodeEls.current[node.id];
+        if (!el) return;
+        const prog   = s.nodeProgs[node.id];
+        const eased  = 1 - Math.pow(1 - prog, 3);
+        const target = dnnPos(node, cw);
+        const sc     = s.scatter[node.id];
+        el.style.transform = `translate(${target.x + sc.dx * (1 - eased) - DNN_NODE_R}px,${target.y + sc.dy * (1 - eased) - DNN_NODE_R}px)`;
+        el.style.opacity   = eased.toFixed(3);
+      });
+    };
+
+    anim.current.raf = requestAnimationFrame(loop);
+    return () => { if (anim.current.raf) cancelAnimationFrame(anim.current.raf); };
+  }, []);
+
+  return (
+    <section className="dnn-section" ref={sectionRef} id="intelligence">
+      <div className="section-inner">
+        <div className="section-header fade-in" style={{ textAlign: 'center', marginBottom: 28 }}>
+          <p className="section-label">Intelligence Pipeline</p>
+          <h2 className="section-title">How your data becomes a decision</h2>
+          <p className="section-desc">Every node a transformation. Every edge a signal. Powered by our multi-layer AI architecture.</p>
+        </div>
+
+        <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto' }}>
+          {/* Layer labels */}
+          <div style={{ position: 'relative', height: 42, marginBottom: 4 }}>
+            {DNN_CFG.map((layer, i) => (
+              <div key={layer.id} className="dnn-layer-label" style={{ left: `${DNN_LAYER_X[i] * 100}%` }}>
+                <span style={{ color: layer.color }}>{layer.sublabel}</span>
+                <span>{layer.label}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Canvas + DOM nodes */}
+          <div className="dnn-canvas-wrap">
+            <canvas ref={canvasRef} className="dnn-canvas" />
+            {DNN_NODES.map(node => (
+              <div
+                key={node.id}
+                ref={el => { nodeEls.current[node.id] = el; }}
+                className="dnn-node"
+                data-layer={node.layer}
+                style={{ position: 'absolute', top: 0, left: 0, opacity: 0, willChange: 'transform, opacity' }}
+              >
+                <div className="dnn-node-ring">
+                  <img
+                    src={`https://cdn.jsdelivr.net/npm/simple-icons@11.4.0/icons/${node.icon}.svg`}
+                    alt={node.label}
+                    className="dnn-node-img"
+                    width="22" height="22"
+                  />
+                </div>
+                <span className="dnn-node-label">{node.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 // ── Scroll-fade hook ───────────────────────────────────────────
 const useFadeIn = () => {
   useEffect(() => {
@@ -1178,7 +1498,7 @@ export default function App() {
       <FloatingButtons theme={theme} setTheme={setTheme} />
 
       {/* All page content — CSS inverts this in 'invert' theme */}
-      <div id="page-content">
+      <div id="page-content" style={{ position: 'relative', zIndex: 1 }}>
       <Nav />
 
       {/* ── HERO ── */}
@@ -1186,22 +1506,22 @@ export default function App() {
         <div className="hero-content">
           <div className="hero-badge fade-in">
             <span className="dot" />
-            Now with real-time market intelligence
+            Turning your data into decision-making tools.
           </div>
           <h1 className="hero-title fade-in fade-in-delay-1">
-            Experience clarity with<br />
-            <em>AI-powered jewelry</em><br />
-            estimation
+            We accelerate your<br />
+            <em>business towards</em><br />
+            growth
           </h1>
           <p className="hero-subtitle fade-in fade-in-delay-2">
-            Caratsense is the intelligence layer for gemstone professionals. Instant AI valuations, itemized breakdowns, and live market pricing — engineered for accuracy at scale.
+            CaratSense is a consultative AI and software studio. We go deep into your operations, find where things are breaking down, and build tailored tech to fix it — dashboards, CRMs, bots, and intelligent automation.
           </p>
           <div className="hero-actions fade-in fade-in-delay-3">
-            <a href="#pricing" className="btn btn-dark">
+            <a href="#engagements" className="btn btn-dark">
               <svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 1a6 6 0 1 0 0 12A6 6 0 0 0 8 2zm-.5 4a.5.5 0 0 1 1 0v3.293l1.854 1.853a.5.5 0 0 1-.708.708L7.5 9.707V6z"/></svg>
-              Start Free Trial
+              Book a Discovery Call
             </a>
-            <a href="#usecases" className="btn btn-ghost">Explore use cases</a>
+            <a href="#whatwebuild" className="btn btn-ghost">See what we build</a>
           </div>
         </div>
         <div className="scroll-indicator" aria-hidden="true">
@@ -1212,12 +1532,15 @@ export default function App() {
       {/* ── WORKFLOWS ── */}
       <WorkflowShowcase />
 
+      {/* ── DNN INTELLIGENCE PIPELINE ── */}
+      <DNNSection />
+
       {/* ── LOGOS ── */}
       <div className="logos">
         <div className="logos-inner">
-          <p className="logos-label">Trusted by professionals across the jewelry industry</p>
+          <p className="logos-label">Built for businesses across every industry</p>
           <div className="logos-grid">
-            {["Sotheby's Gems", 'De Beers Select', "Christie's JW", 'Tiffany Partners', 'GIA Alumni', 'Antwerp Exchange'].map(l => (
+            {['Retail', 'Manufacturing', 'Finance', 'Healthcare', 'Logistics', 'Technology'].map(l => (
               <span key={l} className="logo-item">{l}</span>
             ))}
           </div>
@@ -1229,28 +1552,28 @@ export default function App() {
         <div className="statement-inner">
           <p className="statement-label">Our Mission</p>
           <p className="statement-text">
-            Caratsense is our <strong>AI estimation engine</strong>, evolving jewelry appraisal<br />
-            into the data-first era — for professionals who can't afford to be wrong.
+            We turn your <strong>data into decision-making tools</strong> — built around<br />
+            how your business actually runs, not how software thinks it should.
           </p>
         </div>
       </section>
 
       {/* ── FEATURES ── */}
-      <section className="section" id="usecases">
+      <section className="section" id="whatwebuild">
         <div className="section-inner">
           <div className="section-header fade-in">
-            <p className="section-label">Core Platform</p>
-            <h2 className="section-title">Everything your appraisal workflow needs</h2>
-            <p className="section-desc">One unified platform for instant AI estimation, deep market data, and audit-ready outputs.</p>
+            <p className="section-label">What We Build</p>
+            <h2 className="section-title">Tailored systems for the way your business actually runs</h2>
+            <p className="section-desc">Every engagement starts with understanding your operations — then we build exactly what's needed. No generic software, no bloated platforms.</p>
           </div>
 
           {/* Feature 1 */}
           <div className="feature-row fade-in">
             <div className="feature-text">
-              <span className="feature-tag">Instant AI Estimation</span>
-              <h3 className="feature-heading">Deep AI Analysis Core</h3>
+              <span className="feature-tag">Executive Dashboards</span>
+              <h3 className="feature-heading">Real-time visibility into your business</h3>
               <p className="feature-body">
-                Caratsense's estimation engine identifies gemstone type, cut quality, clarity grade, and color from structured inputs — delivering a certified market value in under 2 seconds with provenance-aware pricing.
+                We integrate directly with Tally, Busy, and other accounting systems used across India — pulling live data into clean dashboards so owners and executives stop relying on end-of-day reports and start making decisions in real time.
               </p>
               <a href="#" className="feature-link">
                 See how it works
@@ -1265,13 +1588,13 @@ export default function App() {
           {/* Feature 2 */}
           <div className="feature-row reverse fade-in">
             <div className="feature-text">
-              <span className="feature-tag">Itemized Breakdowns</span>
-              <h3 className="feature-heading">Higher-level cost intelligence</h3>
+              <span className="feature-tag">CRM &amp; WhatsApp Integration</span>
+              <h3 className="feature-heading">Your entire lead pipeline on WhatsApp</h3>
               <p className="feature-body">
-                Move beyond single-figure quotes. Caratsense delivers a full itemized breakdown — stone, setting, craft, and market index — presented as a trustworthy artifact your clients can actually read.
+                WhatsApp is how Indian B2B runs. We build CRM systems and lead management tools with WhatsApp at the centre — automated follow-ups, order bots, and broadcast sequences so your team never drops a lead again.
               </p>
               <a href="#" className="feature-link">
-                Explore breakdowns
+                Explore CRM features
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
               </a>
             </div>
@@ -1283,13 +1606,13 @@ export default function App() {
           {/* Feature 3 */}
           <div className="feature-row fade-in">
             <div className="feature-text">
-              <span className="feature-tag">Market Intelligence</span>
-              <h3 className="feature-heading">Live market data, always current</h3>
+              <span className="feature-tag">Inventory Intelligence</span>
+              <h3 className="feature-heading">Know what's aging before it costs you</h3>
               <p className="feature-body">
-                Real-time bid/ask pricing across diamond, ruby, sapphire, and emerald categories. Synchronized with major clearing venues — Antwerp, Hong Kong, NY — for pricing you can stand behind.
+                ML-powered aging alerts flag slow-moving stock before it becomes dead inventory. Demand forecasting tells you what to reorder and when — built specifically for jewellery, textiles, and building materials where working capital is everything.
               </p>
               <a href="#" className="feature-link">
-                View market data
+                Explore inventory tools
                 <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
               </a>
             </div>
@@ -1301,13 +1624,13 @@ export default function App() {
           {/* Feature 4 — full width statement row */}
           <div className="feature-row fade-in" style={{ gridTemplateColumns: '1fr', textAlign: 'center', padding: '80px 0 40px' }}>
             <div className="feature-text" style={{ maxWidth: 580, margin: '0 auto' }}>
-              <span className="feature-tag">Multi-source Agents</span>
-              <h3 className="feature-heading">An appraisal-first experience</h3>
+              <span className="feature-tag">Delegation-Ready Systems</span>
+              <h3 className="feature-heading">Built so the business runs without you</h3>
               <p className="feature-body">
-                Run parallel estimations across multiple lots simultaneously. From one central dashboard, manage batch submissions, export GIA-compatible reports, and integrate direct API access into your existing ERP.
+                Most Indian family-run businesses are owner-dependent by design — and it's a bottleneck. We build systems that put the right information in front of the right people, so delegation becomes possible and the owner can finally step back.
               </p>
-              <a href="#pricing" className="btn btn-dark" style={{ marginTop: 8, display: 'inline-flex' }}>
-                Explore the platform
+              <a href="#engagements" className="btn btn-dark" style={{ marginTop: 8, display: 'inline-flex' }}>
+                Start a conversation
               </a>
             </div>
           </div>
@@ -1319,20 +1642,20 @@ export default function App() {
       <section className="trust">
         <div className="trust-inner">
           <div className="fade-in">
-            <p className="trust-label">Built for Trust</p>
-            <h2 className="trust-title">Engineered for professionals in the data-first era</h2>
+            <p className="trust-label">How We Work</p>
+            <h2 className="trust-title">From raw data to decisions that move your business forward</h2>
             <p className="trust-body">
-              Caratsense is purpose-built for certified gemologists, independent appraisers, luxury auction houses, and insurance underwriters — to any professional who requires defensible, audit-ready valuations.
+              We follow a clear pipeline for every engagement: research the business, identify where operations are breaking down, brainstorm the right solution, then build a pitch package — scope doc, demo dashboard with your real data, architecture flowchart, and sprint timeline.
             </p>
-            <a href="#pricing" className="btn btn-gold">Request enterprise access</a>
+            <a href="#engagements" className="btn btn-gold">Start your engagement</a>
           </div>
           <div className="fade-in fade-in-delay-1">
             <div className="trust-stats" style={{ marginBottom: 36 }}>
               {[
-                { val: '99.4%', label: 'Estimation accuracy on certified stones' },
-                { val: '<2s', label: 'Average AI valuation turnaround' },
-                { val: '12M+', label: 'Gemstones in our pricing corpus' },
-                { val: '50+', label: 'Market venues integrated globally' },
+                { val: 'FastAPI', label: 'Backend engineering on a proven stack' },
+                { val: 'React', label: 'Clean dashboards your team will actually use' },
+                { val: 'ML + LLM', label: 'AI layers applied where they genuinely add value' },
+                { val: 'WhatsApp', label: 'The default B2B channel in India, fully integrated' },
               ].map((s, i) => (
                 <div key={i} className="trust-stat">
                   <div className="trust-stat-val">{s.val}</div>
@@ -1342,9 +1665,9 @@ export default function App() {
             </div>
             <div className="trust-visual">
               {[
-                { icon: '🔒', title: 'SOC 2 Type II Certified', sub: 'Your data never trains our models' },
-                { icon: '📋', title: 'GIA-compatible Outputs', sub: 'Export directly to your reporting suite' },
-                { icon: '🌐', title: 'Global Market Coverage', sub: '50+ venues · 24/7 live feeds' },
+                { icon: '🔍', title: 'Research-First', sub: 'We study your business before writing a line of code' },
+                { icon: '📦', title: 'Pitch Package Included', sub: 'Scope doc, demo dashboard, architecture & sprint plan' },
+                { icon: '🌐', title: 'Industry-Agnostic', sub: 'Retail, finance, logistics, healthcare — we build for any domain' },
               ].map((c, i) => (
                 <div key={i} className="trust-card">
                   <div className="trust-card-icon">{c.icon}</div>
@@ -1360,25 +1683,26 @@ export default function App() {
       </section>
 
       {/* ── PRICING ── */}
-      <section className="pricing" id="pricing">
+      <section className="pricing" id="engagements">
         <div className="pricing-inner">
           <div className="pricing-header fade-in">
-            <p className="section-label">Pricing</p>
-            <h2 className="section-title" style={{ textAlign: 'center' }}>For appraisers.<br />For enterprises.</h2>
+            <p className="section-label">Engagements</p>
+            <h2 className="section-title" style={{ textAlign: 'center' }}>Start with a sprint.<br />Scale when it works.</h2>
           </div>
           <div className="pricing-grid fade-in fade-in-delay-1">
-            {/* Pro */}
+            {/* Discovery Sprint */}
             <div className="pricing-card">
-              <div className="pricing-plan">For professionals</div>
-              <div className="pricing-headline">Available at no charge.</div>
-              <div className="pricing-tagline">Achieve precision at scale.</div>
+              <div className="pricing-plan">Discovery Sprint</div>
+              <div className="pricing-headline">Understand before you build.</div>
+              <div className="pricing-tagline">For businesses unsure where to start.</div>
               <ul className="pricing-features">
                 {[
-                  '50 AI estimations per month',
-                  'Full itemized breakdown output',
-                  'Basic market data access',
-                  'PDF export (GIA-compatible format)',
-                  'Email support',
+                  'Deep-dive research into your operations',
+                  'Bottleneck identification workshop',
+                  'Solution architecture & recommendations',
+                  'Demo dashboard built on your real data',
+                  'Scope doc + sprint timeline',
+                  'Architecture flowchart included',
                 ].map((f, i) => (
                   <li key={i} className="pricing-feature">
                     <span className="pricing-feature-check">✓</span>
@@ -1386,22 +1710,22 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              <a href="#" className="btn btn-dark">Start for free</a>
+              <a href="#" className="btn btn-dark">Book a discovery call</a>
             </div>
-            {/* Enterprise */}
+            {/* Build Engagement */}
             <div className="pricing-card featured">
-              <div className="pricing-plan">For organizations</div>
-              <div className="pricing-headline" style={{ color: '#fff' }}>Coming soon.</div>
-              <div className="pricing-tagline">Level up your entire team.</div>
+              <div className="pricing-plan">Full Build Engagement</div>
+              <div className="pricing-headline" style={{ color: '#fff' }}>Custom-built for you.</div>
+              <div className="pricing-tagline">For businesses ready to move.</div>
               <ul className="pricing-features">
                 {[
-                  'Unlimited AI estimations',
-                  'Full real-time market intelligence',
-                  'Batch API access (REST + GraphQL)',
-                  'Custom model fine-tuning',
-                  'SSO, RBAC & audit logs',
-                  'Dedicated account manager',
-                  'SLA with 99.9% uptime guarantee',
+                  'Everything in Discovery Sprint',
+                  'Full product build in focused sprints',
+                  'Tally / Busy / WhatsApp integration',
+                  'ML & LLM layers where they add value',
+                  'Team training & handover documentation',
+                  'Post-launch support & iteration',
+                  'Direct access to your build team',
                 ].map((f, i) => (
                   <li key={i} className="pricing-feature">
                     <span className="pricing-feature-check">✓</span>
@@ -1409,36 +1733,36 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              <a href="#" className="btn btn-gold">Notify me</a>
+              <a href="#" className="btn btn-gold">Start the conversation</a>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── BLOGS ── */}
-      <section className="blogs" id="blog">
+      <section className="blogs" id="insights">
         <div className="blogs-inner">
           <div className="blogs-header">
-            <h2 className="section-title fade-in">Latest insights</h2>
-            <a href="#" className="btn btn-ghost fade-in">View all posts</a>
+            <h2 className="section-title fade-in">From the field</h2>
+            <a href="#" className="btn btn-ghost fade-in">View all case studies</a>
           </div>
           <div className="blogs-grid">
             {[
               {
-                tag: 'AI Research',
-                title: 'How our model achieves 99.4% accuracy on GIA-certified diamonds',
+                tag: 'Case Study',
+                title: 'How a jewellery wholesaler cut owner-dependency by 60% with a WhatsApp CRM',
                 gradient: 'linear-gradient(135deg, #0a0a14, #111128)',
                 accent: '#2563eb',
               },
               {
-                tag: 'Market Data',
-                title: 'Ruby prices at 10-year high — what the data tells us',
+                tag: 'Industry Insight',
+                title: 'Why Tally-integrated dashboards are replacing spreadsheet reporting in Indian SMBs',
                 gradient: 'linear-gradient(135deg, #140a0a, #281111)',
                 accent: '#dc2626',
               },
               {
                 tag: 'Product',
-                title: 'Introducing batch API: estimate entire lots in minutes',
+                title: 'Building an inventory aging alert system for a textile distributor — from research to sprint',
                 gradient: 'linear-gradient(135deg, #0a1209, #111f0e)',
                 accent: '#D4AF37',
               },
@@ -1477,14 +1801,17 @@ export default function App() {
       <div className="footer-cta">
         <Starfield />
         <div className="footer-cta-inner">
-          <div className="footer-cta-logo">Caratsense</div>
-          <h2 className="footer-cta-title">Experience liftoff</h2>
+          <div className="footer-cta-logo">
+            <img src="/logo.jpg" alt="CaratSense" className="footer-cta-logo-img" />
+            Caratsense
+          </div>
+          <h2 className="footer-cta-title">Ready to fix your bottleneck?</h2>
           <p className="footer-cta-sub">
-            The most precise AI jewelry estimation platform, available today. Join professionals across 40+ countries.
+            Tell us where your business is breaking down. We'll research it, map it, and build the right solution — starting with a discovery sprint.
           </p>
           <div className="footer-cta-actions">
-            <a href="#" className="btn btn-gold">Start Free Trial</a>
-            <a href="#" className="btn btn-outline-dark">Request Demo</a>
+            <a href="#" className="btn btn-gold">Book a Discovery Call</a>
+            <a href="#" className="btn btn-outline-dark">See What We Build</a>
           </div>
         </div>
       </div>
@@ -1499,7 +1826,7 @@ export default function App() {
                 Caratsense
               </div>
               <p className="footer-brand-desc">
-                AI-powered jewelry estimation for professionals who can't afford to be wrong.
+                Turning your data into decision-making tools — for any business, any industry.
               </p>
               <div className="footer-socials">
                 {['𝕏', 'in', 'gh', '▷'].map((s, i) => (
@@ -1508,9 +1835,9 @@ export default function App() {
               </div>
             </div>
             {[
-              { title: 'Product', links: ['Features', 'Pricing', 'API Docs', 'Changelog', 'Status'] },
-              { title: 'Use Cases', links: ['Appraisers', 'Auction Houses', 'Insurers', 'Retailers', 'Labs'] },
-              { title: 'Resources', links: ['Blog', 'Guides', 'Press', 'Releases', 'Brand Kit'] },
+              { title: 'What We Build', links: ['Executive Dashboards', 'WhatsApp CRM', 'Inventory Intelligence', 'Order Bots', 'AI Chatbots'] },
+              { title: 'Industries', links: ['Jewellery', 'Textiles', 'Building Materials', 'Manufacturing', 'Retail'] },
+              { title: 'Resources', links: ['Blog', 'Case Studies', 'How We Work', 'Press', 'Brand Kit'] },
               { title: 'Company', links: ['About', 'Careers', 'Contact', 'Privacy', 'Terms'] },
             ].map(col => (
               <div key={col.title}>
@@ -1524,7 +1851,7 @@ export default function App() {
             ))}
           </div>
           <div className="footer-bottom">
-            <span className="footer-copyright">© 2025 Caratsense Inc. All rights reserved.</span>
+            <span className="footer-copyright">© 2025 CaratSense. All rights reserved.</span>
             <div className="footer-legal">
               <a href="#">Privacy</a>
               <a href="#">Terms</a>
