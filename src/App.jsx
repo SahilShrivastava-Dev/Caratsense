@@ -56,8 +56,11 @@ const TechEcosystemBg = () => {
       
       if (svgEl) {
         const rect = svgEl.getBoundingClientRect();
-        // Delay triggering structured mode until the workflow is well within view (center/top)
-        if (rect.top < H * 0.65 && rect.bottom > H * 0.25) {
+        // Latch structured mode forever to ensure they never disappear unexpectedly once triggered
+        if (rect.top < H * 0.75) {
+          stateRef.current.hasTriggeredWorkflow = true;
+        }
+        if (stateRef.current.hasTriggeredWorkflow) {
           structuredMode = true;
           const activeNodes = window.__ACTIVE_SCENARIO_NODES || [];
           const scaleX = rect.width / 1000;
@@ -84,14 +87,24 @@ const TechEcosystemBg = () => {
          
          if (structuredMode) {
            if (target) {
-             const dx = target.x - n.x;
-             const dy = target.y - n.y;
+             const el = nodeRefs.current[i];
+             const isLocked = el && el.classList.contains('structured');
              
-             // Cinematic, observable merging physics
-             n.vx += dx * 0.0035; 
-             n.vy += dy * 0.0035;
-             n.vx *= 0.90; // Less dampening = smoother, slower slide
-             n.vy *= 0.90;
+             if (isLocked) {
+                 // Hard lock so fast scrolling doesn't break physics distance threshold
+                 n.x = target.x;
+                 n.y = target.y;
+                 n.vx = 0;
+                 n.vy = 0;
+             } else {
+                 const dx = target.x - n.x;
+                 const dy = target.y - n.y;
+                 // Cinematic, observable merging physics
+                 n.vx += dx * 0.0035; 
+                 n.vy += dy * 0.0035;
+                 n.vx *= 0.90; // Less dampening = smoother, slower slide
+                 n.vy *= 0.90;
+             }
            } else {
              // gently repel non-active nodes to form a halo, or let them drift
              const cx = W / 2;
@@ -150,11 +163,8 @@ const TechEcosystemBg = () => {
                 el.classList.add('structured');
                 const lbl = el.querySelector('.tech-node-label');
                 if (lbl) lbl.textContent = target.label;
-             } else if (distT >= 60 && el.classList.contains('structured')) {
-                // Fallback to unstructured if it gets thrown off
-                el.classList.add('floating');
-                el.classList.remove('structured');
              }
+             // No fallback if distT >= 60 to protect against fast scroll tearing
            } else {
              if (el.classList.contains('structured')) {
                 el.classList.add('floating');
