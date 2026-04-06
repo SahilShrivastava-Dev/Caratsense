@@ -56,9 +56,14 @@ const TechEcosystemBg = () => {
       
       if (svgEl) {
         const rect = svgEl.getBoundingClientRect();
-        // Latch structured mode forever to ensure they never disappear unexpectedly once triggered
+        // Latch structured mode so they don't bounce off when scrolling fast past it
         if (rect.top < H * 0.75) {
           stateRef.current.hasTriggeredWorkflow = true;
+        }
+        // Release the latch if the user scrolls all the way back UP to the hero section
+        // so the floating particles gracefully return to welcome them!
+        if (rect.top > H * 0.85) {
+          stateRef.current.hasTriggeredWorkflow = false;
         }
         if (stateRef.current.hasTriggeredWorkflow) {
           structuredMode = true;
@@ -158,9 +163,14 @@ const TechEcosystemBg = () => {
            // Opacity handling
            const currentOpStr = el.style.opacity || "1";
            let targetOp = 1;
-           // Keep unassigned background icons beautifully visible (grayish/dim) across whole site
-           if (structuredMode && !target) targetOp = 0.35;
-           else if (!structuredMode) targetOp = 0.8;
+           // The user specifically requested unassigned nodes to vanish after you scroll past the hero
+           // to keep the rest of the website layout completely clean!
+           if (structuredMode && !target) {
+               targetOp = 0.0;
+           } else if (!structuredMode) {
+               // When at the top / hero, let them float visibly!
+               targetOp = 0.8;
+           }
            const newOp = parseFloat(currentOpStr) * 0.9 + targetOp * 0.1;
            el.style.opacity = newOp.toFixed(3);
          }
