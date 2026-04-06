@@ -56,8 +56,8 @@ const TechEcosystemBg = () => {
       
       if (svgEl) {
         const rect = svgEl.getBoundingClientRect();
-        // If workflow area is visible (bounds intersect center screen approx)
-        if (rect.top < H * 0.85 && rect.bottom > H * 0.15) {
+        // Delay triggering structured mode until the workflow is well within view (center/top)
+        if (rect.top < H * 0.65 && rect.bottom > H * 0.25) {
           structuredMode = true;
           const activeNodes = window.__ACTIVE_SCENARIO_NODES || [];
           const scaleX = rect.width / 1000;
@@ -86,10 +86,12 @@ const TechEcosystemBg = () => {
            if (target) {
              const dx = target.x - n.x;
              const dy = target.y - n.y;
-             n.vx += dx * 0.05; 
-             n.vy += dy * 0.05;
-             n.vx *= 0.75; // heavy damp to snap into place
-             n.vy *= 0.75;
+             
+             // Cinematic, observable merging physics
+             n.vx += dx * 0.0035; 
+             n.vy += dy * 0.0035;
+             n.vx *= 0.90; // Less dampening = smoother, slower slide
+             n.vy *= 0.90;
            } else {
              // gently repel non-active nodes to form a halo, or let them drift
              const cx = W / 2;
@@ -97,13 +99,14 @@ const TechEcosystemBg = () => {
              const dx = n.x - cx;
              const dy = n.y - cy;
              const d = Math.sqrt(dx*dx + dy*dy);
-             if (d < Math.max(W, H) * 0.4 && d > 0) {
-                n.vx += (dx/d) * 0.8;
-                n.vy += (dy/d) * 0.8;
+             if (d < Math.max(W, H) * 0.6 && d > 0) {
+                // Repel non-selected items softly to edges
+                n.vx += (dx/d) * 0.4;
+                n.vy += (dy/d) * 0.4;
              }
-             n.vy -= 0.2; // gentle float up
-             n.vx *= 0.94;
-             n.vy *= 0.94;
+             n.vy -= 0.1; // gentle float up
+             n.vx *= 0.96;
+             n.vy *= 0.96;
            }
          } else {
            // Normal Brownian floating
@@ -140,12 +143,17 @@ const TechEcosystemBg = () => {
            el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) translate(-50%, -50%)`;
            
            if (target) {
+             // Use larger distance threshold for structure claiming to make the styling pop smoothly
              const distT = Math.sqrt(Math.pow(target.x - n.x, 2) + Math.pow(target.y - n.y, 2));
-             if (distT < 40 && !el.classList.contains('structured')) {
+             if (distT < 60 && !el.classList.contains('structured')) {
                 el.classList.remove('floating');
                 el.classList.add('structured');
                 const lbl = el.querySelector('.tech-node-label');
                 if (lbl) lbl.textContent = target.label;
+             } else if (distT >= 60 && el.classList.contains('structured')) {
+                // Fallback to unstructured if it gets thrown off
+                el.classList.add('floating');
+                el.classList.remove('structured');
              }
            } else {
              if (el.classList.contains('structured')) {
@@ -178,7 +186,7 @@ const TechEcosystemBg = () => {
   }, []);
 
   return (
-    <div id="ecosystem-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+    <div id="ecosystem-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 50 }}>
       {/* Hardware-accelerated DOM layer for independent flying icon nodes */}
       {ICONS.map((id, i) => (
         <div key={`${id}_${i}`} ref={el => nodeRefs.current[i] = el} className="tech-node floating" style={{ opacity: 0 }}>

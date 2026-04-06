@@ -1725,7 +1725,7 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   position: relative;
   width: 100%;
   padding: 80px 0 120px;
-  background: var(--bg-primary); 
+  background: transparent; 
   overflow: hidden;
   z-index: 2;
   margin-top: 24px;
