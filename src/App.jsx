@@ -12,46 +12,42 @@ const GemMark = ({ size = 28 }) => (
   </svg>
 );
 
-// ── Tech Ecosystem Background — physics-driven orchestrator ───────
-const ICONS = [
+const BASE_ICONS = [
   "n8n", "python", "openai", "supabase", "claude", "databricks", "zendesk",
   "gmail", "amazonaws", "salesforce", "quickbooks", "slack", "robotframework",
   "googlesheets", "jira", "elasticsearch", "react", "nodedotjs", "docker",
   "kubernetes", "postgresql", "redis", "mongodb", "stripe", "github", "googlecloud"
 ];
+// Allow repetitions: explicitly add popular ones or just duplicate the array
+const ICONS = [
+  ...BASE_ICONS,
+  "openai", "salesforce", "python", "slack", "postgresql", "react", "github", "docker"
+];
 
 const TechEcosystemBg = () => {
-  const canvasRef = useRef(null);
   const nodeRefs = useRef([]);
   const stateRef = useRef({ mouse: { x: -9999, y: -9999 }, raf: null });
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: true });
-    
     // Initialize node state separate from react state for speed
-    let nodes = ICONS.map(id => ({
+    // We add a unique ref id to handle duplicated tech IDs in physics mapping
+    let nodes = ICONS.map((id, index) => ({
       id,
+      refId: `${id}_${index}`,
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
       vx: (Math.random() - 0.5) * 1.5,
       vy: (Math.random() - 0.5) * 1.5,
     }));
 
-    const init = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    init();
+    const init = () => {}; // Placeholder if you still want a resize listener logic
     window.addEventListener('resize', init);
 
     const onMouse = e => { stateRef.current.mouse = { x: e.clientX, y: e.clientY }; };
     window.addEventListener('mousemove', onMouse);
 
     const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const W = canvas.width, H = canvas.height;
+      const W = window.innerWidth, H = window.innerHeight;
       const { mouse } = stateRef.current;
       
       const svgEl = window.__ACTIVE_WORKFLOW_SVG_ID ? document.getElementById(window.__ACTIVE_WORKFLOW_SVG_ID) : null;
@@ -72,14 +68,19 @@ const TechEcosystemBg = () => {
             targetMap[tId] = {
               x: rect.left + n.x * scaleX,
               y: rect.top + n.y * scaleY - 3, // slightly offset to match exact old alignment
-              label: n.label
+              label: n.label,
+              assigned: false // to ensure we only target one duplicate
             };
           });
         }
       }
 
       nodes.forEach((n, i) => {
-         const target = structuredMode ? targetMap[n.id] : null;
+         let target = null;
+         if (structuredMode && targetMap[n.id] && !targetMap[n.id].assigned) {
+             target = targetMap[n.id];
+             targetMap[n.id].assigned = true; // Claim this single floating icon!
+         }
          
          if (structuredMode) {
            if (target) {
@@ -163,27 +164,6 @@ const TechEcosystemBg = () => {
          }
       });
       
-      // Draw neural connections between nodes
-      ctx.lineWidth = 0.8;
-      for (let i = 0; i < nodes.length; i++) {
-        for (let j = i + 1; j < nodes.length; j++) {
-          const dx = nodes[i].x - nodes[j].x;
-          const dy = nodes[i].y - nodes[j].y;
-          const distSq = dx*dx + dy*dy;
-          const threshold = structuredMode ? 100 : 250;
-          if (distSq < threshold * threshold) {
-            const d = Math.sqrt(distSq);
-            const alpha = (1 - d/threshold) * (structuredMode ? 0.05 : 0.35);
-            if (alpha > 0.01) {
-              ctx.beginPath();
-              ctx.moveTo(nodes[i].x, nodes[i].y);
-              ctx.lineTo(nodes[j].x, nodes[j].y);
-              ctx.strokeStyle = `rgba(130, 140, 150, ${alpha})`;
-              ctx.stroke();
-            }
-          }
-        }
-      }
 
       stateRef.current.raf = requestAnimationFrame(draw);
     };
@@ -199,11 +179,9 @@ const TechEcosystemBg = () => {
 
   return (
     <div id="ecosystem-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-      {/* Canvas layer for connection lines */}
-      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
-      {/* Hardware-accelerated DOM layer for icon nodes */}
+      {/* Hardware-accelerated DOM layer for independent flying icon nodes */}
       {ICONS.map((id, i) => (
-        <div key={id} ref={el => nodeRefs.current[i] = el} className="tech-node floating" style={{ opacity: 0 }}>
+        <div key={`${id}_${i}`} ref={el => nodeRefs.current[i] = el} className="tech-node floating" style={{ opacity: 0 }}>
           <div className="tech-node-icon">
             <img className="tech-node-logo" src={`https://cdn.jsdelivr.net/npm/simple-icons@11.4.0/icons/${id}.svg`} alt="" />
           </div>
