@@ -85,8 +85,7 @@ const TechEcosystemBg = () => {
              targetMap[n.id].assigned = true; // Claim this single floating icon!
          }
          
-         if (structuredMode) {
-           if (target) {
+         if (structuredMode && target) {
              const el = nodeRefs.current[i];
              const isLocked = el && el.classList.contains('structured');
              
@@ -105,24 +104,8 @@ const TechEcosystemBg = () => {
                  n.vx *= 0.90; // Less dampening = smoother, slower slide
                  n.vy *= 0.90;
              }
-           } else {
-             // gently repel non-active nodes to form a halo, or let them drift
-             const cx = W / 2;
-             const cy = H / 2;
-             const dx = n.x - cx;
-             const dy = n.y - cy;
-             const d = Math.sqrt(dx*dx + dy*dy);
-             if (d < Math.max(W, H) * 0.6 && d > 0) {
-                // Repel non-selected items softly to edges
-                n.vx += (dx/d) * 0.4;
-                n.vy += (dy/d) * 0.4;
-             }
-             n.vy -= 0.1; // gentle float up
-             n.vx *= 0.96;
-             n.vy *= 0.96;
-           }
          } else {
-           // Normal Brownian floating
+           // Normal Brownian floating for ALL unassigned nodes regardless of structuredMode
            n.vx += (Math.random() - 0.5) * 0.06;
            n.vy += (Math.random() - 0.5) * 0.06;
            
@@ -175,7 +158,8 @@ const TechEcosystemBg = () => {
            // Opacity handling
            const currentOpStr = el.style.opacity || "1";
            let targetOp = 1;
-           if (structuredMode && !target) targetOp = 0.1;
+           // Keep unassigned background icons beautifully visible (grayish/dim) across whole site
+           if (structuredMode && !target) targetOp = 0.35;
            else if (!structuredMode) targetOp = 0.8;
            const newOp = parseFloat(currentOpStr) * 0.9 + targetOp * 0.1;
            el.style.opacity = newOp.toFixed(3);
