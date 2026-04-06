@@ -12,118 +12,178 @@ const GemMark = ({ size = 28 }) => (
   </svg>
 );
 
-// ── Neural Background — physics-driven neuron simulation ────────
-// Free-floating neurons with Brownian drift, cursor repulsion,
-// proximity synaptic connections, & signal pulse propagation.
-// Scroll triggers cascade activations sweeping the network.
+// ── Tech Ecosystem Background — physics-driven orchestrator ───────
+const ICONS = [
+  "n8n", "python", "openai", "supabase", "claude", "databricks", "zendesk",
+  "gmail", "amazonaws", "salesforce", "quickbooks", "slack", "robotframework",
+  "googlesheets", "jira", "elasticsearch", "react", "nodedotjs", "docker",
+  "kubernetes", "postgresql", "redis", "mongodb", "stripe", "github", "googlecloud"
+];
 
-const NeuralBg = () => {
+const TechEcosystemBg = () => {
   const canvasRef = useRef(null);
-  const stateRef  = useRef({
-    mouse:   { x: -9999, y: -9999 },
-    raf:     null,
-  });
+  const nodeRefs = useRef([]);
+  const stateRef = useRef({ mouse: { x: -9999, y: -9999 }, raf: null });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const N = 120;
-    const CONN = 140;
-    const REPEL_R = 250;
-
-    let neurons = [];
+    const ctx = canvas.getContext('2d', { alpha: true });
     
+    // Initialize node state separate from react state for speed
+    let nodes = ICONS.map(id => ({
+      id,
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: (Math.random() - 0.5) * 1.5,
+    }));
+
     const init = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
-      neurons = Array.from({ length: N }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.8,
-        vy: (Math.random() - 0.5) * 0.8,
-        r: 1.5 + Math.random() * 2.0,
-      }));
     };
     init();
     window.addEventListener('resize', init);
 
-    const onMouse = e => {
-      stateRef.current.mouse = { x: e.clientX, y: e.clientY };
-    };
+    const onMouse = e => { stateRef.current.mouse = { x: e.clientX, y: e.clientY }; };
     window.addEventListener('mousemove', onMouse);
 
-    let lastT = performance.now();
-
-    const draw = (ts) => {
-      const dt = Math.min(32, ts - lastT) / 16;
-      lastT = ts;
+    const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       const W = canvas.width, H = canvas.height;
       const { mouse } = stateRef.current;
-
-      // Update
-      neurons.forEach(n => {
-        const dx = n.x - mouse.x, dy = n.y - mouse.y;
-        const d = Math.sqrt(dx*dx + dy*dy);
-        if (d < REPEL_R && d > 0) {
-          const f = ((1 - d / REPEL_R) ** 1.5) * 3.5;
-          n.vx += (dx / d) * f * dt;
-          n.vy += (dy / d) * f * dt;
-        }
-
-        const WALL = 40;
-        if (n.x < WALL) n.vx += (WALL - n.x) * 0.01 * dt;
-        if (n.x > W-WALL) n.vx -= (n.x - (W - WALL)) * 0.01 * dt;
-        if (n.y < WALL) n.vy += (WALL - n.y) * 0.01 * dt;
-        if (n.y > H-WALL) n.vy -= (n.y - (H - WALL)) * 0.01 * dt;
-
-        n.vx += (Math.random() - 0.5) * 0.05 * dt;
-        n.vy += (Math.random() - 0.5) * 0.05 * dt;
-
-        const spd = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
-        if (spd > 1.5) { n.vx = (n.vx/spd)*1.5; n.vy = (n.vy/spd)*1.5; }
-        n.vx *= 0.98; n.vy *= 0.98;
-        n.x += n.vx * dt; n.y += n.vy * dt;
-      });
-
-      // Connections
-      for (let i = 0; i < neurons.length; i++) {
-        const a = neurons[i];
-        for (let j = i + 1; j < neurons.length; j++) {
-          const b = neurons[j];
-          const ddx = b.x - a.x, ddy = b.y - a.y;
-          const dd = Math.sqrt(ddx*ddx + ddy*ddy);
-          if (dd > CONN) continue;
+      
+      const svgEl = window.__ACTIVE_WORKFLOW_SVG_ID ? document.getElementById(window.__ACTIVE_WORKFLOW_SVG_ID) : null;
+      let structuredMode = false;
+      let targetMap = {};
+      
+      if (svgEl) {
+        const rect = svgEl.getBoundingClientRect();
+        // If workflow area is visible (bounds intersect center screen approx)
+        if (rect.top < H * 0.85 && rect.bottom > H * 0.15) {
+          structuredMode = true;
+          const activeNodes = window.__ACTIVE_SCENARIO_NODES || [];
+          const scaleX = rect.width / 1000;
+          const scaleY = rect.height / 340;
           
-          // Grayscale line color
-          const alpha = (1 - dd / CONN) * 0.15;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = `rgba(100, 100, 100, ${alpha})`;
-          ctx.lineWidth = 0.8;
-          ctx.stroke();
+          activeNodes.forEach(n => {
+            const tId = n.iconUrl.split('/').pop().replace('.svg', '');
+            targetMap[tId] = {
+              x: rect.left + n.x * scaleX,
+              y: rect.top + n.y * scaleY - 3, // slightly offset to match exact old alignment
+              label: n.label
+            };
+          });
         }
       }
 
-      // Draw nodes: close are dark/black, far are gray
-      neurons.forEach(n => {
-        const dx = n.x - mouse.x, dy = n.y - mouse.y;
-        const d = Math.sqrt(dx*dx + dy*dy);
-        const factor = Math.max(0, 1 - d / 400); // 1 = closest
-        
-        // 180 = grey, 0 = black
-        const rgb = Math.round(180 - factor * 180);
-        
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r * (1 + factor * 0.5), 0, Math.PI*2);
-        ctx.fillStyle = `rgb(${rgb}, ${rgb}, ${rgb})`;
-        ctx.fill();
-        ctx.strokeStyle = `rgba(150, 150, 150, 0.4)`;
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
+      nodes.forEach((n, i) => {
+         const target = structuredMode ? targetMap[n.id] : null;
+         
+         if (structuredMode) {
+           if (target) {
+             const dx = target.x - n.x;
+             const dy = target.y - n.y;
+             n.vx += dx * 0.05; 
+             n.vy += dy * 0.05;
+             n.vx *= 0.75; // heavy damp to snap into place
+             n.vy *= 0.75;
+           } else {
+             // gently repel non-active nodes to form a halo, or let them drift
+             const cx = W / 2;
+             const cy = H / 2;
+             const dx = n.x - cx;
+             const dy = n.y - cy;
+             const d = Math.sqrt(dx*dx + dy*dy);
+             if (d < Math.max(W, H) * 0.4 && d > 0) {
+                n.vx += (dx/d) * 0.8;
+                n.vy += (dy/d) * 0.8;
+             }
+             n.vy -= 0.2; // gentle float up
+             n.vx *= 0.94;
+             n.vy *= 0.94;
+           }
+         } else {
+           // Normal Brownian floating
+           n.vx += (Math.random() - 0.5) * 0.06;
+           n.vy += (Math.random() - 0.5) * 0.06;
+           
+           // Cursor repel
+           const mdx = n.x - mouse.x;
+           const mdy = n.y - mouse.y;
+           const md = Math.sqrt(mdx*mdx + mdy*mdy);
+           if (md < 250 && md > 0) {
+             const f = Math.pow(1 - md/250, 1.5) * 2.0;
+             n.vx += (mdx/md) * f;
+             n.vy += (mdy/md) * f;
+           }
+           
+           const WALL = 40;
+           if (n.x < WALL) n.vx += (WALL - n.x) * 0.02;
+           if (n.x > W - WALL) n.vx -= (n.x - (W - WALL)) * 0.02;
+           if (n.y < WALL) n.vy += (WALL - n.y) * 0.02;
+           if (n.y > H - WALL) n.vy -= (n.y - (H - WALL)) * 0.02;
+           
+           const spd = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
+           if (spd > 2.0) { n.vx = (n.vx/spd)*2.0; n.vy = (n.vy/spd)*2.0; }
+           n.vx *= 0.99; n.vy *= 0.99;
+         }
+         
+         n.x += n.vx;
+         n.y += n.vy;
+         
+         // Direct DOM mutation for absolute scale performance
+         const el = nodeRefs.current[i];
+         if (el) {
+           el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) translate(-50%, -50%)`;
+           
+           if (target) {
+             const distT = Math.sqrt(Math.pow(target.x - n.x, 2) + Math.pow(target.y - n.y, 2));
+             if (distT < 40 && !el.classList.contains('structured')) {
+                el.classList.remove('floating');
+                el.classList.add('structured');
+                const lbl = el.querySelector('.tech-node-label');
+                if (lbl) lbl.textContent = target.label;
+             }
+           } else {
+             if (el.classList.contains('structured')) {
+                el.classList.add('floating');
+                el.classList.remove('structured');
+             }
+           }
+           
+           // Opacity handling
+           const currentOpStr = el.style.opacity || "1";
+           let targetOp = 1;
+           if (structuredMode && !target) targetOp = 0.1;
+           else if (!structuredMode) targetOp = 0.8;
+           const newOp = parseFloat(currentOpStr) * 0.9 + targetOp * 0.1;
+           el.style.opacity = newOp.toFixed(3);
+         }
       });
+      
+      // Draw neural connections between nodes
+      ctx.lineWidth = 0.8;
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const distSq = dx*dx + dy*dy;
+          const threshold = structuredMode ? 100 : 250;
+          if (distSq < threshold * threshold) {
+            const d = Math.sqrt(distSq);
+            const alpha = (1 - d/threshold) * (structuredMode ? 0.05 : 0.35);
+            if (alpha > 0.01) {
+              ctx.beginPath();
+              ctx.moveTo(nodes[i].x, nodes[i].y);
+              ctx.lineTo(nodes[j].x, nodes[j].y);
+              ctx.strokeStyle = `rgba(130, 140, 150, ${alpha})`;
+              ctx.stroke();
+            }
+          }
+        }
+      }
 
       stateRef.current.raf = requestAnimationFrame(draw);
     };
@@ -138,11 +198,19 @@ const NeuralBg = () => {
   }, []);
 
   return (
-    <canvas ref={canvasRef} style={{
-      position: 'fixed', top: 0, left: 0,
-      width: '100vw', height: '100vh',
-      pointerEvents: 'none', zIndex: 1,
-    }} />
+    <div id="ecosystem-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
+      {/* Canvas layer for connection lines */}
+      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: '100%' }} />
+      {/* Hardware-accelerated DOM layer for icon nodes */}
+      {ICONS.map((id, i) => (
+        <div key={id} ref={el => nodeRefs.current[i] = el} className="tech-node floating" style={{ opacity: 0 }}>
+          <div className="tech-node-icon">
+            <img className="tech-node-logo" src={`https://cdn.jsdelivr.net/npm/simple-icons@11.4.0/icons/${id}.svg`} alt="" />
+          </div>
+          <div className="tech-node-label"></div>
+        </div>
+      ))}
+    </div>
   );
 };
 
@@ -984,6 +1052,25 @@ const WorkflowShowcase = () => {
   const next = () => setActiveIdx((i) => (i === SCENARIOS.length - 1 ? 0 : i + 1));
 
   const scen = SCENARIOS[activeIdx];
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    // Notify the global physics orchestrator about the active workflow graph
+    window.__ACTIVE_SCENARIO_NODES = scen.nodes;
+    if (svgRef.current) {
+      const activeId = `workflow-svg-${scen.id}`;
+      svgRef.current.id = activeId;
+      window.__ACTIVE_WORKFLOW_SVG_ID = activeId;
+    }
+  }, [scen, activeIdx]);
+
+  // Clean up global target when component unmounts
+  useEffect(() => {
+    return () => {
+      window.__ACTIVE_SCENARIO_NODES = null;
+      window.__ACTIVE_WORKFLOW_SVG_ID = null;
+    };
+  }, []);
 
   return (
     <section className="workflows-section" id="workflows">
@@ -1005,7 +1092,7 @@ const WorkflowShowcase = () => {
              </div>
              
              <div className="workflow-canvas-wrap">
-               <svg viewBox="0 0 1000 340" className="workflow-svg" key={`svg-${scen.id}`}>
+               <svg ref={svgRef} viewBox="0 0 1000 340" className="workflow-svg" key={`svg-${scen.id}`}>
                  <defs>
                    <filter id={`glow-sig-${scen.id}`} x="-50%" y="-50%" width="200%" height="200%">
                      <feGaussianBlur stdDeviation="4" result="blur" />
@@ -1053,16 +1140,7 @@ const WorkflowShowcase = () => {
                     return null;
                  })}
                  
-                 {scen.nodes.map(n => (
-                   <foreignObject key={n.id} x={n.x - 70} y={n.y - 24} width="140" height="48" style={{ overflow: 'visible' }}>
-                     <div className="workflow-node" xmlns="http://www.w3.org/1999/xhtml">
-                       <div className="workflow-node-icon">
-                         <img className="workflow-node-logo" src={n.iconUrl} alt={n.label} width="20" height="20" />
-                       </div>
-                       <div className="workflow-node-label">{n.label}</div>
-                     </div>
-                   </foreignObject>
-                 ))}
+                 {/* foreignObjects are intentionally removed. The TechEcosystemBg automatically drops nodes perfectly onto these coordinates in structured mode! */}
                </svg>
              </div>
            </div>
@@ -1106,8 +1184,7 @@ export default function App() {
 
   return (
     <>
-      {/* Cursor effects + FABs — outside the invertable zone */}
-      <NeuralBg />
+      <TechEcosystemBg />
       <FloatingButtons theme={theme} setTheme={setTheme} />
 
       {/* All page content — CSS inverts this in 'invert' theme */}

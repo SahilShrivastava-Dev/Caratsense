@@ -1948,3 +1948,91 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
 [data-theme="dark"] .carousel-dot { background: rgba(255,255,255,0.2); }
 [data-theme="dark"] .carousel-dot.active { background: #fff; }
 
+
+/* =================== TECH ECOSYSTEM NODES =================== */
+.tech-node {
+  position: absolute; /* Set to absolute so hardware acceleration is scoped properly */
+  top: 0; left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--node-bg, rgba(20, 24, 30, 0.4));
+  border: 1px solid var(--node-border, rgba(255, 255, 255, 0.08));
+  border-radius: 24px;
+  height: 48px;
+  min-width: 48px;
+  box-sizing: border-box;
+  backdrop-filter: blur(12px);
+  will-change: transform, width, opacity, background-color;
+  transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.4s ease, border-color 0.4s ease;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.tech-node-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.tech-node-logo {
+  display: block;
+  width: 20px;
+  height: 20px;
+  filter: invert(1) brightness(2);
+  transition: filter 0.3s ease;
+}
+
+.tech-node-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--node-text, rgba(255,255,255,0.8));
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Floating State */
+.tech-node.floating {
+  width: 48px;
+  border-radius: 50%;
+}
+
+/* Structured State */
+.tech-node.structured {
+  width: 140px;
+  justify-content: flex-start;
+}
+
+.tech-node.structured .tech-node-label {
+  opacity: 1;
+  max-width: 120px;
+  padding-right: 16px;
+}
+
+/* Theme Handling */
+[data-theme="light"] .tech-node {
+  --node-bg: #ffffff;
+  --node-border: rgba(0,0,0,0.1);
+  --node-text: rgba(0,0,0,0.8);
+}
+[data-theme="light"] .tech-node-logo {
+  filter: none;
+}
+[data-theme="light"] .tech-node.floating {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+
+[data-theme="invert"] .tech-node {
+  --node-border: rgba(0, 229, 255, 0.25);
+}
+[data-theme="invert"] .tech-node.structured {
+  border-color: rgba(0, 229, 255, 0.8);
+}
