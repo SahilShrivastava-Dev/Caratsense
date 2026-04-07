@@ -9,7 +9,7 @@
 
 > A premium, ultra-minimalist B2B SaaS landing page for **Caratsense** — an AI-powered gemstone estimation platform. Inspired by the [antigravity.google](https://antigravity.google) aesthetic with a cursor-reactive dot field, multi-color particle system, interactive mock UIs, and a 3-mode theme system.
 
-![Caratsense Hero](https://raw.githubusercontent.com/SahilShrivastava-Dev/Caratsense/master/src/assets/hero.png)
+![Caratsense Hero](https://raw.githubusercontent.com/rajseedeshpande-hub/Caratsense/main/src/assets/hero.png)
 
 ---
 
@@ -40,7 +40,7 @@ Make sure you have the following installed:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/SahilShrivastava-Dev/Caratsense.git
+git clone https://github.com/rajseedeshpande-hub/Caratsense.git
 cd Caratsense
 ```
 
@@ -142,4 +142,4 @@ MIT — feel free to fork, adapt, and ship.
 
 ---
 
-<p align="center">Built with ❤️ by <a href="https://github.com/SahilShrivastava-Dev">SahilShrivastava-Dev</a></p>
+<p align="center">Built with ❤️ by <a href="https://github.com/rajseedeshpande-hub">rajseedeshpande-hub</a></p>
