@@ -1195,6 +1195,7 @@ const WorkflowShowcase = () => {
   );
 };
 
+
 // ── DNN Visualization ──────────────────────────────────────────────────────
 
 const DNN_CANVAS_H = 560;
