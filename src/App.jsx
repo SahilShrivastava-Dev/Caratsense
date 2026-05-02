@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import HeroOrganicNetwork from './components/HeroOrganicNetwork';
 import './index.css';
 
 // ── Gem SVG mark ──────────────────────────────────────────────
@@ -12,244 +13,7 @@ const GemMark = ({ size = 28 }) => (
   </svg>
 );
 
-const BASE_ICONS = [
-  "n8n", "python", "openai", "supabase", "claude", "databricks", "zendesk",
-  "gmail", "amazonaws", "salesforce", "quickbooks", "slack", "robotframework",
-  "googlesheets", "jira", "elasticsearch", "react", "nodedotjs", "docker",
-  "kubernetes", "postgresql", "redis", "mongodb", "stripe", "github", "googlecloud"
-];
-// Allow repetitions: explicitly add popular ones or just duplicate the array
-const ICONS = [
-  ...BASE_ICONS,
-  "openai", "salesforce", "python", "slack", "postgresql", "react", "github", "docker"
-];
 
-const TechEcosystemBg = () => {
-  const nodeRefs = useRef([]);
-  const stateRef = useRef({ mouse: { x: -9999, y: -9999 }, raf: null });
-
-  useEffect(() => {
-    // Initialize node state separate from react state for speed
-    // We add a unique ref id to handle duplicated tech IDs in physics mapping
-    // Grid-based initial placement so nodes start evenly spread
-    const cols = Math.ceil(Math.sqrt(ICONS.length * (window.innerWidth / window.innerHeight)));
-    const rows = Math.ceil(ICONS.length / cols);
-    const cellW = window.innerWidth / cols;
-    const cellH = window.innerHeight / rows;
-    let nodes = ICONS.map((id, index) => ({
-      id,
-      refId: `${id}_${index}`,
-      x: (index % cols) * cellW + cellW * 0.2 + Math.random() * cellW * 0.6,
-      y: Math.floor(index / cols) * cellH + cellH * 0.2 + Math.random() * cellH * 0.6,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: (Math.random() - 0.5) * 0.5,
-    }));
-
-    const init = () => {}; // Placeholder if you still want a resize listener logic
-    window.addEventListener('resize', init);
-
-    const onMouse = e => { stateRef.current.mouse = { x: e.clientX, y: e.clientY }; };
-    window.addEventListener('mousemove', onMouse);
-
-    const draw = () => {
-      const W = window.innerWidth, H = window.innerHeight;
-      const { mouse } = stateRef.current;
-
-      const svgEl = window.__ACTIVE_WORKFLOW_SVG_ID ? document.getElementById(window.__ACTIVE_WORKFLOW_SVG_ID) : null;
-      let structuredMode = false;
-      let targetMap = {};
-      // rect/scale exposed so locked nodes can recompute position every frame
-      let svgRect = null, scaleX = 1, scaleY = 1;
-
-      if (svgEl) {
-        svgRect = svgEl.getBoundingClientRect();
-        scaleX = svgRect.width / 1000;
-        scaleY = svgRect.height / 340;
-        // Trigger convergence as soon as workflow comes into view
-        if (svgRect.top < H * 0.9) {
-          stateRef.current.hasTriggeredWorkflow = true;
-        }
-        // Only release when user scrolls fully back to the very top
-        if (svgRect.top > H * 1.1) {
-          stateRef.current.hasTriggeredWorkflow = false;
-        }
-        if (stateRef.current.hasTriggeredWorkflow) {
-          structuredMode = true;
-          const activeNodes = window.__ACTIVE_SCENARIO_NODES || [];
-          activeNodes.forEach(sn => {
-            const tId = sn.iconUrl.split('/').pop().replace('.svg', '');
-            targetMap[tId] = {
-              // Screen coords for this frame (used during approach lerp)
-              x: svgRect.left + sn.x * scaleX,
-              y: svgRect.top + sn.y * scaleY - 3,
-              // SVG-space coords stored so locked nodes recompute from rect every frame
-              svgX: sn.x,
-              svgY: sn.y,
-              label: sn.label,
-              assigned: false
-            };
-          });
-        }
-      }
-
-      nodes.forEach((n, i) => {
-         let target = null;
-         if (structuredMode && targetMap[n.id] && !targetMap[n.id].assigned) {
-             target = targetMap[n.id];
-             targetMap[n.id].assigned = true;
-         }
-
-         // If node is locked to a slot, recompute its position directly from the
-         // current SVG rect every frame — moves perfectly with the workflow on scroll.
-         // If svgRect is temporarily null (e.g. carousel transition), freeze in place.
-         if (n.locked) {
-             if (svgRect) {
-               n.x = svgRect.left + n.targetSvgX * scaleX;
-               n.y = svgRect.top  + n.targetSvgY * scaleY - 3;
-             }
-             // Always zero velocity — never let a locked node drift
-             n.vx = 0;
-             n.vy = 0;
-         } else if (structuredMode && target) {
-             const el = nodeRefs.current[i];
-             const dx = target.x - n.x;
-             const dy = target.y - n.y;
-             const dist = Math.sqrt(dx * dx + dy * dy);
-
-             if (dist < 6) {
-                 // Lock: store SVG-space offset so future frames derive position from rect
-                 n.locked = true;
-                 n.targetSvgX = target.svgX;
-                 n.targetSvgY = target.svgY;
-                 n.x = target.x;
-                 n.y = target.y;
-                 n.vx = 0;
-                 n.vy = 0;
-                 if (el) {
-                   // Kill CSS transitions while locked — prevents width/shape animation on scroll
-                   el.style.transition = 'none';
-                   if (!el.classList.contains('structured')) {
-                     const lbl = el.querySelector('.tech-node-label');
-                     if (lbl) lbl.textContent = target.label;
-                     el.classList.remove('floating');
-                     el.classList.add('structured');
-                   }
-                 }
-             } else {
-                 // Fast lerp approach — no velocity accumulation, no overshoot
-                 const LERP = 0.22;
-                 n.x += dx * LERP;
-                 n.y += dy * LERP;
-                 n.vx = 0;
-                 n.vy = 0;
-             }
-         } else {
-           // Normal Brownian floating for ALL unassigned nodes regardless of structuredMode
-           n.vx += (Math.random() - 0.5) * 0.04;
-           n.vy += (Math.random() - 0.5) * 0.04;
-
-           // Node-to-node repulsion — keeps nodes from overlapping or clustering
-           const MIN_DIST = 140;
-           nodes.forEach((other, j) => {
-             if (j === i) return;
-             const rdx = n.x - other.x;
-             const rdy = n.y - other.y;
-             const rd = Math.sqrt(rdx * rdx + rdy * rdy);
-             if (rd < MIN_DIST && rd > 0) {
-               const rf = (1 - rd / MIN_DIST) * 0.6;
-               n.vx += (rdx / rd) * rf;
-               n.vy += (rdy / rd) * rf;
-             }
-           });
-
-           // Cursor repel
-           const mdx = n.x - mouse.x;
-           const mdy = n.y - mouse.y;
-           const md = Math.sqrt(mdx*mdx + mdy*mdy);
-           if (md < 250 && md > 0) {
-             const f = Math.pow(1 - md/250, 1.5) * 2.0;
-             n.vx += (mdx/md) * f;
-             n.vy += (mdy/md) * f;
-           }
-
-           const WALL = 40;
-           if (n.x < WALL) n.vx += (WALL - n.x) * 0.02;
-           if (n.x > W - WALL) n.vx -= (n.x - (W - WALL)) * 0.02;
-           if (n.y < WALL) n.vy += (WALL - n.y) * 0.02;
-           if (n.y > H - WALL) n.vy -= (n.y - (H - WALL)) * 0.02;
-
-           const spd = Math.sqrt(n.vx*n.vx + n.vy*n.vy);
-           if (spd > 1.5) { n.vx = (n.vx/spd)*1.5; n.vy = (n.vy/spd)*1.5; }
-           n.vx *= 0.98; n.vy *= 0.98;
-         }
-         
-         n.x += n.vx;
-         n.y += n.vy;
-         
-         // Direct DOM mutation for absolute scale performance
-         const el = nodeRefs.current[i];
-         if (el) {
-           el.style.transform = `translate3d(${n.x}px, ${n.y}px, 0) translate(-50%, -50%)`;
-           
-           if (!structuredMode && el.classList.contains('structured')) {
-             n.locked = false;
-             // Restore transitions before animating back to floating circle
-             el.style.transition = '';
-             el.classList.add('floating');
-             el.classList.remove('structured');
-           }
-           
-           // Opacity handling
-           const currentOpStr = el.style.opacity || "1";
-           let targetOp = 1;
-           // The user specifically requested unassigned nodes to vanish after you scroll past the hero
-           // to keep the rest of the website layout completely clean!
-           if (structuredMode && !target) {
-               targetOp = 0.0;
-           } else if (!structuredMode) {
-               // When at the top / hero, let them float visibly!
-               targetOp = 0.8;
-           }
-           const newOp = parseFloat(currentOpStr) * 0.9 + targetOp * 0.1;
-           el.style.opacity = newOp.toFixed(3);
-         }
-      });
-
-      // Raise ecosystem above page-content when converging into workflow,
-      // drop back behind it when floating freely in the hero
-      const bgEl = document.getElementById('ecosystem-bg');
-      if (bgEl) {
-        bgEl.style.zIndex = structuredMode ? '2' : '0';
-      }
-
-      stateRef.current.raf = requestAnimationFrame(draw);
-    };
-
-    stateRef.current.raf = requestAnimationFrame(draw);
-
-    return () => {
-      cancelAnimationFrame(stateRef.current.raf);
-      window.removeEventListener('mousemove', onMouse);
-      window.removeEventListener('resize', init);
-    };
-  }, []);
-
-  return (
-    <div id="ecosystem-bg" style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-      {/* Hardware-accelerated DOM layer for independent flying icon nodes */}
-      {ICONS.map((id, i) => (
-        <div key={`${id}_${i}`} ref={el => nodeRefs.current[i] = el} className="tech-node floating" style={{ opacity: 0 }}>
-          <div className="tech-node-icon">
-            <img className="tech-node-logo" src={`https://cdn.jsdelivr.net/npm/simple-icons@11.4.0/icons/${id}.svg`} alt="" />
-          </div>
-          <div className="tech-node-label"></div>
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// ── Starfield ──────────────────────────────────────────────────
 const Starfield = () => {
   const canvasRef = useRef(null);
 
@@ -961,7 +725,7 @@ const Nav = () => {
   return (
     <nav className="nav" ref={navRef}>
       <a href="#" className="nav-logo">
-        <img src="/logo.jpg" alt="CaratSense" className="nav-logo-img" />
+        <img src="/logo.jpeg" alt="CaratSense" className="nav-logo-img" />
         Caratsense
       </a>
       <div className="nav-links">
@@ -982,496 +746,6 @@ const Nav = () => {
 
 // ── Workflow Showcase ──────────────────────────────────────────
 // ── Workflow Showcase ──────────────────────────────────────────
-const SCENARIOS = [
-  {
-    id: "scen-1",
-    label: "Tally / Busy Executive Dashboard",
-    description: "Live P&L, sales, and inventory data pulled from Tally or Busy into a real-time owner dashboard.",
-    nodes: [
-      { id: "n1", label: "Client App", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/n8n.svg", x: 120, y: 170 },
-      { id: "n2", label: "Router", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/python.svg", x: 300, y: 170 },
-      { id: "n3", label: "Embedding", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/openai.svg", x: 480, y: 80 },
-      { id: "n4", label: "Vector DB", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/supabase.svg", x: 660, y: 80 },
-      { id: "n5", label: "LLM Core", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/claude.svg", x: 480, y: 260 },
-      { id: "n6", label: "Analytics", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/databricks.svg", x: 860, y: 80 },
-      { id: "n7", label: "Zendesk", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/zendesk.svg", x: 860, y: 260 }
-    ],
-    paths: [
-      { id: "p1", d: "M 190 170 L 230 170", type: "solid" },
-      { id: "p2", d: "M 370 170 C 410 170, 410 80, 410 80", type: "solid" },
-      { id: "p3", d: "M 370 170 C 410 170, 410 260, 410 260", type: "solid" },
-      { id: "p4", d: "M 550 80 L 590 80", type: "solid" },
-      { id: "p5", d: "M 730 80 C 780 80, 780 260, 550 260", type: "dash" }, /* Context injection */
-      { id: "p6", d: "M 730 80 L 790 80", type: "solid" },
-      { id: "p7", d: "M 550 260 C 700 260, 700 80, 790 80", type: "dash" }, /* Telemetry */
-      { id: "p8", d: "M 550 260 L 790 260", type: "solid" }
-    ],
-    signals: [
-      { pathId: "p1", delay: 0, dur: 1.0, color: "#00e5ff", type: "dot" },
-      { pathId: "p2", delay: 1.0, dur: 1.0, color: "#a078e6", type: "dot" },
-      { pathId: "p3", delay: 1.0, dur: 1.0, color: "#a078e6", type: "dot" },
-      { pathId: "p4", delay: 2.0, dur: 1.0, color: "#00e5ff", type: "dot" },
-      { pathId: "p5", delay: 2.5, dur: 2.0, color: "#d4af37", type: "stream" },
-      { pathId: "p6", delay: 3.5, dur: 1.5, color: "#ffffff", type: "dot" },
-      { pathId: "p7", delay: 3.0, dur: 1.5, color: "#ffffff", type: "dot" },
-      { pathId: "p8", delay: 4.5, dur: 1.5, color: "#00e5ff", type: "stream" }
-    ]
-  },
-  {
-    id: "scen-2",
-    label: "WhatsApp CRM & Order Bot",
-    description: "Automated lead capture, follow-up sequences, and order management — all running on WhatsApp.",
-    nodes: [
-      { id: "n1", label: "Intake", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/gmail.svg", x: 120, y: 170 },
-      { id: "n2", label: "Document AI", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/amazonaws.svg", x: 300, y: 170 },
-      { id: "n3", label: "Validation", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/python.svg", x: 480, y: 170 },
-      { id: "n4", label: "Salesforce", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/salesforce.svg", x: 660, y: 80 },
-      { id: "n5", label: "Quickbooks", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/quickbooks.svg", x: 660, y: 260 },
-      { id: "n6", label: "Alerting", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/slack.svg", x: 860, y: 170 }
-    ],
-    paths: [
-      { id: "p1", d: "M 190 170 L 230 170", type: "solid" },
-      { id: "p2", d: "M 370 170 L 410 170", type: "solid" },
-      { id: "p3", d: "M 550 170 C 590 170, 590 80, 590 80", type: "solid" },
-      { id: "p4", d: "M 550 170 C 590 170, 590 260, 590 260", type: "solid" },
-      { id: "p5", d: "M 730 80 C 780 80, 780 170, 790 170", type: "dash" },
-      { id: "p6", d: "M 730 260 C 780 260, 780 170, 790 170", type: "dash" }
-    ],
-    signals: [
-      { pathId: "p1", delay: 0, dur: 1.0, color: "#d4af37", type: "dot" },
-      { pathId: "p2", delay: 1.0, dur: 1.5, color: "#00e5ff", type: "dot" },
-      { pathId: "p3", delay: 2.5, dur: 1.0, color: "#a078e6", type: "stream" },
-      { pathId: "p4", delay: 2.5, dur: 1.0, color: "#a078e6", type: "stream" },
-      { pathId: "p5", delay: 3.5, dur: 1.5, color: "#ffffff", type: "dot" },
-      { pathId: "p6", delay: 3.5, dur: 1.5, color: "#ffffff", type: "dot" }
-    ]
-  },
-  {
-    id: "scen-3",
-    label: "Inventory Intelligence Pipeline",
-    description: "ML-based aging detection and demand forecasting for jewellery, textiles, and building materials.",
-    nodes: [
-      { id: "n1", label: "Scheduler", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/n8n.svg", x: 120, y: 170 },
-      { id: "n2", label: "Agent LLM", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/claude.svg", x: 300, y: 170 },
-      { id: "n3", label: "Scraper", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/robotframework.svg", x: 480, y: 80 },
-      { id: "n4", label: "Processing", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/python.svg", x: 480, y: 260 },
-      { id: "n5", label: "Data Sink", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/googlesheets.svg", x: 660, y: 80 },
-      { id: "n6", label: "Ticketing", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/jira.svg", x: 660, y: 260 },
-      { id: "n7", label: "Reporting", iconUrl: "https://cdn.jsdelivr.net/npm/simple-icons/icons/slack.svg", x: 860, y: 170 }
-    ],
-    paths: [
-      { id: "p1", d: "M 190 170 L 230 170", type: "solid" },
-      { id: "p2", d: "M 370 170 C 410 170, 410 80, 410 80", type: "solid" },
-      { id: "p3", d: "M 550 80 C 600 80, 600 260, 410 260", type: "dash" },
-      { id: "p4", d: "M 550 80 L 590 80", type: "solid" },
-      { id: "p5", d: "M 550 260 L 590 260", type: "solid" },
-      { id: "p6", d: "M 730 80 C 780 80, 780 170, 790 170", type: "dash" },
-      { id: "p7", d: "M 730 260 C 780 260, 780 170, 790 170", type: "dash" }
-    ],
-    signals: [
-      { pathId: "p1", delay: 0, dur: 1.0, color: "#d4af37", type: "dot" },
-      { pathId: "p2", delay: 1.0, dur: 1.0, color: "#00e5ff", type: "dot" },
-      { pathId: "p3", delay: 2.0, dur: 1.5, color: "#a078e6", type: "stream" },
-      { pathId: "p4", delay: 2.0, dur: 1.0, color: "#00e5ff", type: "stream" },
-      { pathId: "p5", delay: 3.5, dur: 1.0, color: "#ffffff", type: "dot" },
-      { pathId: "p6", delay: 3.0, dur: 1.5, color: "#d4af37", type: "dot" },
-      { pathId: "p7", delay: 4.5, dur: 1.5, color: "#d4af37", type: "dot" }
-    ]
-  }
-];
-
-const WorkflowShowcase = () => {
-  const [activeIdx, setActiveIdx] = useState(0);
-
-  const prev = () => setActiveIdx((i) => (i === 0 ? SCENARIOS.length - 1 : i - 1));
-  const next = () => setActiveIdx((i) => (i === SCENARIOS.length - 1 ? 0 : i + 1));
-
-  const scen = SCENARIOS[activeIdx];
-  const svgRef = useRef(null);
-
-  useEffect(() => {
-    // Notify the global physics orchestrator about the active workflow graph
-    window.__ACTIVE_SCENARIO_NODES = scen.nodes;
-    if (svgRef.current) {
-      const activeId = `workflow-svg-${scen.id}`;
-      svgRef.current.id = activeId;
-      window.__ACTIVE_WORKFLOW_SVG_ID = activeId;
-    }
-  }, [scen, activeIdx]);
-
-  // Clean up global target when component unmounts
-  useEffect(() => {
-    return () => {
-      window.__ACTIVE_SCENARIO_NODES = null;
-      window.__ACTIVE_WORKFLOW_SVG_ID = null;
-    };
-  }, []);
-
-  return (
-    <section className="workflows-section" id="workflows">
-       <div className="workflow-animated-container fade-in">
-         <div className="section-header" style={{ textAlign: 'center', marginBottom: 40, marginTop: 40 }}>
-           <p className="section-label">How We Build It</p>
-           <h2 className="section-title">Real systems. Real integrations.</h2>
-         </div>
-         
-         <div className="workflow-carousel-wrap">
-           <button className="carousel-btn left" onClick={prev}>
-             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
-           </button>
-
-           <div className="workflow-card">
-             <div className="workflow-card-header" key={`h-${scen.id}`}>
-               <h3 className="workflow-card-title">{scen.label}</h3>
-               <p className="workflow-card-desc">{scen.description}</p>
-             </div>
-             
-             <div className="workflow-canvas-wrap">
-               <svg ref={svgRef} viewBox="0 0 1000 340" className="workflow-svg" key={`svg-${scen.id}`}>
-                 <defs>
-                   <filter id={`glow-sig-${scen.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                     <feGaussianBlur stdDeviation="4" result="blur" />
-                     <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                   </filter>
-                 </defs>
-                 
-                 {scen.paths.map(p => (
-                   <path 
-                     key={p.id} 
-                     id={`${scen.id}-${p.id}`}
-                     d={p.d} 
-                     className={`workflow-path workflow-path-${p.type}`}
-                     stroke={p.type === 'dash' ? "rgba(180, 190, 220, 0.6)" : "rgba(150, 160, 180, 0.4)"} 
-                     strokeWidth="2"
-                     fill="none"
-                   />
-                 ))}
-
-                 {scen.signals.map((sig, i) => {
-                    const renderCircle = (offsetDelay, idxKey, sizeMultiplier) => (
-                      <circle key={`sig-${i}-${idxKey}`} r={4.5 * sizeMultiplier} fill={sig.color} filter={`url(#glow-sig-${scen.id})`}>
-                        <animateMotion 
-                          dur={`${sig.dur}s`} 
-                          repeatCount="indefinite"
-                          begin={`${sig.delay + offsetDelay}s`}
-                        >
-                          <mpath href={`#${scen.id}-${sig.pathId}`} />
-                        </animateMotion>
-                      </circle>
-                    );
-
-                    if (sig.type === 'stream') {
-                      return (
-                        <g key={`stream-${i}`}>
-                          {renderCircle(0, 0, 0.8)}
-                          {renderCircle(0.15, 1, 0.8)}
-                          {renderCircle(0.30, 2, 0.8)}
-                        </g>
-                      );
-                    }
-                    if (sig.type === 'dot') {
-                       return renderCircle(0, 0, 1.0);
-                    }
-                    return null;
-                 })}
-                 
-                 {/* foreignObjects are intentionally removed. The TechEcosystemBg automatically drops nodes perfectly onto these coordinates in structured mode! */}
-               </svg>
-             </div>
-           </div>
-
-           <button className="carousel-btn right" onClick={next}>
-             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none"><polyline points="9 18 15 12 9 6"></polyline></svg>
-           </button>
-         </div>
-
-         <div className="carousel-dots">
-           {SCENARIOS.map((_, i) => (
-             <span key={i} className={`carousel-dot ${i === activeIdx ? 'active' : ''}`} onClick={() => setActiveIdx(i)} />
-           ))}
-         </div>
-       </div>
-    </section>
-  );
-};
-
-
-// ── DNN Visualization ──────────────────────────────────────────────────────
-
-const DNN_CANVAS_H = 560;
-const DNN_NODE_R   = 24;   // icon circle radius (px)
-const DNN_LAYER_X  = [0.10, 0.35, 0.65, 0.90]; // x as fraction of canvas width
-const DNN_ROW_GAP  = 86;   // vertical spacing between nodes in same layer
-
-const DNN_CFG = [
-  { id: 0, sublabel: 'Input Layer',   label: 'Data Sources',  color: '#a78bfa',
-    nodes: [
-      { icon: 'postgresql',    label: 'PostgreSQL' },
-      { icon: 'mongodb',       label: 'MongoDB'    },
-      { icon: 'elasticsearch', label: 'Elastic'    },
-      { icon: 'redis',         label: 'Redis'      },
-      { icon: 'amazonaws',     label: 'S3 / DWH'  },
-    ]},
-  { id: 1, sublabel: 'Processing',    label: 'ETL & Compute', color: '#818cf8',
-    nodes: [
-      { icon: 'python',      label: 'Python'     },
-      { icon: 'docker',      label: 'Docker'     },
-      { icon: 'kubernetes',  label: 'K8s'        },
-      { icon: 'databricks',  label: 'Databricks' },
-      { icon: 'n8n',         label: 'Pipelines'  },
-    ]},
-  { id: 2, sublabel: 'Intelligence',  label: 'AI / GNN Core', color: '#d4af37',
-    nodes: [
-      { icon: 'openai',      label: 'OpenAI'    },
-      { icon: 'claude',      label: 'Claude'    },
-      { icon: 'supabase',    label: 'Vector DB' },
-      { icon: 'googlecloud', label: 'GCP ML'    },
-      { icon: 'nodedotjs',   label: 'Runtime'   },
-    ]},
-  { id: 3, sublabel: 'Output Layer',  label: 'Delivery',      color: '#34d399',
-    nodes: [
-      { icon: 'react',        label: 'Dashboard' },
-      { icon: 'slack',        label: 'Alerts'    },
-      { icon: 'github',       label: 'Pipelines' },
-      { icon: 'stripe',       label: 'Payments'  },
-      { icon: 'googlesheets', label: 'Reports'   },
-    ]},
-];
-
-// Build flat node list
-const DNN_NODES = DNN_CFG.flatMap(layer =>
-  layer.nodes.map((n, row) => ({
-    id: `dnn-${layer.id}-${row}`,
-    layer: layer.id, row,
-    icon: n.icon, label: n.label, color: layer.color,
-  }))
-);
-const DNN_NODE_MAP = Object.fromEntries(DNN_NODES.map(n => [n.id, n]));
-
-// Build connections: each node → 2-3 nodes in next layer, spread by proximity
-const DNN_CONNS = (() => {
-  const byLayer = {};
-  DNN_NODES.forEach(n => { (byLayer[n.layer] = byLayer[n.layer] || []).push(n); });
-  const conns = [], seen = new Set();
-  [0, 1, 2].forEach(li => {
-    const from = byLayer[li] || [], to = byLayer[li + 1] || [];
-    if (!to.length) return;
-    from.forEach((f, fi) => {
-      const ratio = from.length > 1 ? fi / (from.length - 1) : 0.5;
-      const base  = Math.round(ratio * (to.length - 1));
-      const idxs  = new Set([
-        Math.max(0, base - 1), base, Math.min(to.length - 1, base + 1),
-        // one extra "long-range" link for the dense neural look
-        Math.floor(Math.random() * to.length),
-      ]);
-      idxs.forEach(ti => {
-        const key = `${f.id}>${to[ti].id}`;
-        if (!seen.has(key)) { seen.add(key); conns.push({ from: f.id, to: to[ti].id, color: f.color }); }
-      });
-    });
-  });
-  return conns;
-})();
-
-const dnnPos = (node, cw) => {
-  const count  = DNN_CFG[node.layer].nodes.length;
-  const totalH = (count - 1) * DNN_ROW_GAP;
-  const startY = (DNN_CANVAS_H - totalH) / 2;
-  return {
-    x: Math.round(cw * DNN_LAYER_X[node.layer]),
-    y: Math.round(startY + node.row * DNN_ROW_GAP),
-  };
-};
-
-const rgb = hex => `${parseInt(hex.slice(1,3),16)},${parseInt(hex.slice(3,5),16)},${parseInt(hex.slice(5,7),16)}`;
-
-const DNNSection = () => {
-  const sectionRef  = useRef(null);
-  const canvasRef   = useRef(null);
-  const nodeEls     = useRef({});
-  const anim        = useRef({
-    triggered: false, elapsed: 0, lastTime: null, raf: null,
-    skeletonProg: 0,
-    nodeProgs: Object.fromEntries(DNN_NODES.map(n => [n.id, 0])),
-    scatter:    Object.fromEntries(DNN_NODES.map(n => [n.id, {
-      dx: (Math.random() - 0.5) * 680,
-      dy: (Math.random() - 0.5) * 460,
-    }])),
-    pulses: [],
-  });
-
-  // IntersectionObserver: fire animation once on enter
-  useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => {
-      if (e.isIntersecting && !anim.current.triggered) {
-        anim.current.triggered = true;
-        anim.current.lastTime  = null;
-      }
-    }, { threshold: 0.15 });
-    if (sectionRef.current) obs.observe(sectionRef.current);
-    return () => obs.disconnect();
-  }, []);
-
-  // Main animation loop
-  useEffect(() => {
-    const loop = ts => {
-      const s = anim.current;
-      s.raf = requestAnimationFrame(loop);
-      if (!s.triggered) return;
-
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      // Delta time
-      const dt = s.lastTime ? Math.min((ts - s.lastTime) / 1000, 0.05) : 0;
-      s.lastTime = ts;
-      s.elapsed += dt;
-
-      // Sync canvas resolution to CSS size
-      const cw = canvas.offsetWidth  || 1000;
-      const ch = canvas.offsetHeight || DNN_CANVAS_H;
-      if (canvas.width !== cw)  canvas.width  = cw;
-      if (canvas.height !== ch) canvas.height = ch;
-
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, cw, ch);
-
-      // ── Progress ────────────────────────────────────────────────
-      s.skeletonProg = Math.min(1, s.elapsed / 1.0); // skeleton draws in over 1 s
-
-      DNN_NODES.forEach(node => {
-        const start = 0.38 + node.layer * 0.22 + node.row * 0.045;
-        s.nodeProgs[node.id] = Math.min(1, Math.max(0, (s.elapsed - start) / 0.65));
-      });
-
-      // ── Pulses ──────────────────────────────────────────────────
-      if (s.elapsed > 1.1) {
-        s.pulses = s.pulses.filter(p => p.t <= 1.0);
-        s.pulses.forEach(p => { p.t += dt * p.speed; });
-        if (s.pulses.length < 20 && Math.random() < 0.25) {
-          const c = DNN_CONNS[Math.floor(Math.random() * DNN_CONNS.length)];
-          s.pulses.push({ from: c.from, to: c.to, color: c.color, t: 0, speed: 0.3 + Math.random() * 0.4 });
-        }
-      }
-
-      // ── Draw connections ────────────────────────────────────────
-      DNN_CONNS.forEach(conn => {
-        const f  = dnnPos(DNN_NODE_MAP[conn.from], cw);
-        const t  = dnnPos(DNN_NODE_MAP[conn.to],   cw);
-        const cx = (f.x + t.x) / 2;
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(f.x, f.y);
-        ctx.bezierCurveTo(cx, f.y, cx, t.y, t.x, t.y);
-        ctx.strokeStyle = `rgba(${rgb(conn.color)},${(s.skeletonProg * 0.22).toFixed(3)})`;
-        ctx.lineWidth   = 1;
-        ctx.shadowBlur  = 5;
-        ctx.shadowColor = `rgba(${rgb(conn.color)},0.4)`;
-        ctx.stroke();
-        ctx.restore();
-      });
-
-      // ── Draw skeleton node circles (fade out as real icons arrive) ──
-      DNN_NODES.forEach(node => {
-        const pos   = dnnPos(node, cw);
-        const alpha = s.skeletonProg * Math.max(0, 1 - s.nodeProgs[node.id] * 2) * 0.45;
-        if (alpha < 0.01) return;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, DNN_NODE_R, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(${rgb(node.color)},${alpha.toFixed(3)})`;
-        ctx.lineWidth   = 1.5;
-        ctx.shadowBlur  = 10;
-        ctx.shadowColor = `rgba(${rgb(node.color)},${(alpha * 0.6).toFixed(3)})`;
-        ctx.stroke();
-        ctx.restore();
-      });
-
-      // ── Draw pulses ─────────────────────────────────────────────
-      s.pulses.forEach(p => {
-        const f  = dnnPos(DNN_NODE_MAP[p.from], cw);
-        const t  = dnnPos(DNN_NODE_MAP[p.to],   cw);
-        const cx = (f.x + t.x) / 2, mt = 1 - p.t;
-        const px = mt*mt*mt*f.x + 3*mt*mt*p.t*cx + 3*mt*p.t*p.t*cx + p.t*p.t*p.t*t.x;
-        const py = mt*mt*mt*f.y + 3*mt*mt*p.t*f.y + 3*mt*p.t*p.t*t.y + p.t*p.t*p.t*t.y;
-        const op = Math.sin(Math.PI * p.t);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle  = `rgba(${rgb(p.color)},${(op * 0.9).toFixed(3)})`;
-        ctx.shadowBlur = 14;
-        ctx.shadowColor = `rgba(${rgb(p.color)},${op.toFixed(3)})`;
-        ctx.fill();
-        ctx.restore();
-      });
-
-      // ── Animate DOM nodes ────────────────────────────────────────
-      DNN_NODES.forEach(node => {
-        const el = nodeEls.current[node.id];
-        if (!el) return;
-        const prog   = s.nodeProgs[node.id];
-        const eased  = 1 - Math.pow(1 - prog, 3);
-        const target = dnnPos(node, cw);
-        const sc     = s.scatter[node.id];
-        el.style.transform = `translate(${target.x + sc.dx * (1 - eased) - DNN_NODE_R}px,${target.y + sc.dy * (1 - eased) - DNN_NODE_R}px)`;
-        el.style.opacity   = eased.toFixed(3);
-      });
-    };
-
-    anim.current.raf = requestAnimationFrame(loop);
-    return () => { if (anim.current.raf) cancelAnimationFrame(anim.current.raf); };
-  }, []);
-
-  return (
-    <section className="dnn-section" ref={sectionRef} id="intelligence">
-      <div className="section-inner">
-        <div className="section-header fade-in" style={{ textAlign: 'center', marginBottom: 28 }}>
-          <p className="section-label">Intelligence Pipeline</p>
-          <h2 className="section-title">How your data becomes a decision</h2>
-          <p className="section-desc">Every node a transformation. Every edge a signal. Powered by our multi-layer AI architecture.</p>
-        </div>
-
-        <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto' }}>
-          {/* Layer labels */}
-          <div style={{ position: 'relative', height: 42, marginBottom: 4 }}>
-            {DNN_CFG.map((layer, i) => (
-              <div key={layer.id} className="dnn-layer-label" style={{ left: `${DNN_LAYER_X[i] * 100}%` }}>
-                <span style={{ color: layer.color }}>{layer.sublabel}</span>
-                <span>{layer.label}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Canvas + DOM nodes */}
-          <div className="dnn-canvas-wrap">
-            <canvas ref={canvasRef} className="dnn-canvas" />
-            {DNN_NODES.map(node => (
-              <div
-                key={node.id}
-                ref={el => { nodeEls.current[node.id] = el; }}
-                className="dnn-node"
-                data-layer={node.layer}
-                style={{ position: 'absolute', top: 0, left: 0, opacity: 0, willChange: 'transform, opacity' }}
-              >
-                <div className="dnn-node-ring">
-                  <img
-                    src={`https://cdn.jsdelivr.net/npm/simple-icons@11.4.0/icons/${node.icon}.svg`}
-                    alt={node.label}
-                    className="dnn-node-img"
-                    width="22" height="22"
-                  />
-                </div>
-                <span className="dnn-node-label">{node.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// ── Scroll-fade hook ───────────────────────────────────────────
 const useFadeIn = () => {
   useEffect(() => {
     const els = document.querySelectorAll('.fade-in');
@@ -1495,53 +769,19 @@ export default function App() {
 
   return (
     <>
-      <TechEcosystemBg />
       <FloatingButtons theme={theme} setTheme={setTheme} />
 
-      {/* All page content — CSS inverts this in 'invert' theme */}
+      {/* Hero + all page content */}
       <div id="page-content" style={{ position: 'relative', zIndex: 1 }}>
-      <Nav />
-
-      {/* ── HERO ── */}
-      <section className="hero" id="product">
-        <div className="hero-content">
-          <div className="hero-badge fade-in">
-            <span className="dot" />
-            Turning your data into decision-making tools.
-          </div>
-          <h1 className="hero-title fade-in fade-in-delay-1">
-            We accelerate your<br />
-            <em>business towards</em><br />
-            growth
-          </h1>
-          <p className="hero-subtitle fade-in fade-in-delay-2">
-            CaratSense is a consultative AI and software studio. We go deep into your operations, find where things are breaking down, and build tailored tech to fix it — dashboards, CRMs, bots, and intelligent automation.
-          </p>
-          <div className="hero-actions fade-in fade-in-delay-3">
-            <a href="#engagements" className="btn btn-dark">
-              <svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 1a6 6 0 1 0 0 12A6 6 0 0 0 8 2zm-.5 4a.5.5 0 0 1 1 0v3.293l1.854 1.853a.5.5 0 0 1-.708.708L7.5 9.707V6z"/></svg>
-              Book a Discovery Call
-            </a>
-            <a href="#whatwebuild" className="btn btn-ghost">See what we build</a>
-          </div>
-        </div>
-        <div className="scroll-indicator" aria-hidden="true">
-          <div className="scroll-line" />
-        </div>
-      </section>
-      
-      {/* ── WORKFLOWS ── */}
-      <WorkflowShowcase />
-
-      {/* ── DNN INTELLIGENCE PIPELINE ── */}
-      <DNNSection />
+        <Nav />
+        <HeroOrganicNetwork />
 
       {/* ── LOGOS ── */}
       <div className="logos">
         <div className="logos-inner">
           <p className="logos-label">Built for businesses across every industry</p>
           <div className="logos-grid">
-            {['Retail', 'Manufacturing', 'Finance', 'Healthcare', 'Logistics', 'Technology'].map(l => (
+            {['Retail', 'Manufacturing', 'Real Estate', 'F&B', 'Jewellery', 'Hospitality', 'Specialty Chemicals', 'Building Materials', 'Watches', 'Aviation', 'Student Housing', 'Bakery', 'FMCG Distribution', 'Advertising & Exhibitions', 'Legal Services', 'Textile & Fashion', 'R&D'].map(l => (
               <span key={l} className="logo-item">{l}</span>
             ))}
           </div>
@@ -1551,7 +791,7 @@ export default function App() {
       {/* ── STATEMENT ── */}
       <section className="statement">
         <div className="statement-inner">
-          <p className="statement-label">Our Mission</p>
+          <p className="statement-label">SEE BEYOND</p>
           <p className="statement-text">
             We turn your <strong>data into decision-making tools</strong> — built around<br />
             how your business actually runs, not how software thinks it should.
@@ -1653,10 +893,10 @@ export default function App() {
           <div className="fade-in fade-in-delay-1">
             <div className="trust-stats" style={{ marginBottom: 36 }}>
               {[
-                { val: 'FastAPI', label: 'Backend engineering on a proven stack' },
-                { val: 'React', label: 'Clean dashboards your team will actually use' },
-                { val: 'ML + LLM', label: 'AI layers applied where they genuinely add value' },
-                { val: 'WhatsApp', label: 'The default B2B channel in India, fully integrated' },
+                { val: 'Fully Customized', label: 'Designed specifically for your actual workflow' },
+                { val: 'India-Focused Pricing', label: 'Transparent structures built for growing enterprises' },
+                { val: 'Scalable Architecture', label: 'Built to grow alongside your expanding operations' },
+                { val: 'Workflow-First', label: 'We adapt to you, not the other way around' },
               ].map((s, i) => (
                 <div key={i} className="trust-stat">
                   <div className="trust-stat-val">{s.val}</div>
@@ -1734,7 +974,18 @@ export default function App() {
                   </li>
                 ))}
               </ul>
-              <a href="#" className="btn btn-gold">Start the conversation</a>
+              <a
+                href="https://api.whatsapp.com/send/?phone=919309137416&text=Hi%2C+I+want+to+build+custom+operational+software+for+my+business&type=phone_number&app_absent=0"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-gold"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Start the conversation
+              </a>
             </div>
           </div>
         </div>
@@ -1803,12 +1054,12 @@ export default function App() {
         <Starfield />
         <div className="footer-cta-inner">
           <div className="footer-cta-logo">
-            <img src="/logo.jpg" alt="CaratSense" className="footer-cta-logo-img" />
+            <img src="/logo.jpeg" alt="CaratSense" className="footer-cta-logo-img" />
             Caratsense
           </div>
-          <h2 className="footer-cta-title">Ready to fix your bottleneck?</h2>
+          <h2 className="footer-cta-title">Let's build systems that actually fit your business.</h2>
           <p className="footer-cta-sub">
-            Tell us where your business is breaking down. We'll research it, map it, and build the right solution — starting with a discovery sprint.
+            Tell us where your business is breaking down. We'll research it, map it, and build the right solution. Contact us at <strong>vk@caratsense.in</strong> or call <strong>+91 93091 37416</strong>.
           </p>
           <div className="footer-cta-actions">
             <a href="#" className="btn btn-gold">Book a Discovery Call</a>
@@ -1827,7 +1078,7 @@ export default function App() {
                 Caratsense
               </div>
               <p className="footer-brand-desc">
-                Turning your data into decision-making tools — for any business, any industry.
+                <strong>SEE BEYOND.</strong> Custom operational platforms, designed around how Indian businesses actually work. Everything we build is designed around your actual workflow, not configured off a generic SaaS.
               </p>
               <div className="footer-socials">
                 {['𝕏', 'in', 'gh', '▷'].map((s, i) => (

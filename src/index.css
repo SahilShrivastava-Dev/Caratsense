@@ -2279,3 +2279,148 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
 [data-theme="light"] .dnn-layer-label span:last-child {
   color: rgba(200,200,220,0.7);
 }
+
+/* ══════════════════════════════════════════════════════════════
+   HeroOrganicNetwork — 4-phase scroll animation
+   ══════════════════════════════════════════════════════════════ */
+
+.hon-wrapper {
+  height: 250vh;
+  position: relative;
+}
+
+.hon-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: #07070f;
+}
+
+.hon-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.hon-svg-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: all;
+  overflow: visible;
+}
+
+/* Hero text in phase 1 */
+.hon-hero-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  width: min(680px, 90vw);
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hon-hero-text .hero-badge {
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.hon-hero-text .hero-title {
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  color: #f0f2f5;
+  line-height: 1.12;
+  margin-bottom: 20px;
+}
+
+.hon-hero-text .hero-title em {
+  color: #D4AF37;
+  font-style: normal;
+}
+
+.hon-hero-text .hero-subtitle {
+  color: rgba(200, 210, 230, 0.75);
+  font-size: 1rem;
+  line-height: 1.65;
+  margin-bottom: 36px;
+}
+
+.hon-hero-text .hero-actions {
+  gap: 12px;
+  justify-content: center;
+}
+
+/* Phase labels */
+.hon-phase-label {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 10;
+  animation: hon-fadein 0.6s ease both;
+}
+
+.hon-phase-label span {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(212, 175, 55, 0.7);
+  background: rgba(212, 175, 55, 0.08);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  padding: 6px 18px;
+  border-radius: 99px;
+}
+
+.hon-phase-label--bottom {
+  top: auto;
+  bottom: 32px;
+}
+
+@keyframes hon-fadein {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* scroll indicator inherits global styles */
+.hon-sticky .scroll-indicator {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ── HeroOrganicNetwork particle layer ── */
+.hon-particles-layer {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hon-particle {
+  position: absolute;
+  top: 0; left: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transition: opacity 0.3s;
+}
+
+.hon-particle-img {
+  width: 28px;
+  height: 28px;
+  filter: invert(1) sepia(1) saturate(0) brightness(1.5);
+  opacity: 0.55;
+  display: block;
+}
