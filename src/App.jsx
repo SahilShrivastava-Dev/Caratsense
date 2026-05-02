@@ -729,7 +729,7 @@ const Nav = () => {
         Caratsense
       </a>
       <div className="nav-links">
-        {['What We Build', 'Industries', 'Engagements', 'Insights'].map(l => (
+        {['About', 'What We Build', 'Industries', 'Testimonials', 'Engagements', 'Insights'].map(l => (
           <a key={l} href={`#${l.toLowerCase().replace(/\s+/g,'')}`} className="nav-link">{l}</a>
         ))}
       </div>
@@ -775,6 +775,40 @@ export default function App() {
       <div id="page-content" style={{ position: 'relative', zIndex: 1 }}>
         <Nav />
         <HeroOrganicNetwork />
+
+        {/* ── ABOUT US ── */}
+        <section className="section" id="about">
+          <div className="section-inner">
+            <div className="about-grid fade-in">
+              <div className="about-content">
+                <span className="section-label">Our Story</span>
+                <h2 className="section-title">Bridging the Digital Gap for Indian Enterprises</h2>
+                <p className="section-desc">
+                  At Caratsense, we build custom operational platforms designed around how Indian businesses actually work. We believe that your software should adapt to your workflow, not the other way around.
+                </p>
+                <p className="section-desc">
+                  From AI-powered data intelligence to seamless WhatsApp integrations, we turn your siloed data into powerful decision-making tools. Our goal is to empower owners to delegate and scale without losing control.
+                </p>
+              </div>
+              <div className="about-visual">
+                <div className="about-card">
+                  <div className="about-card-icon">🇮🇳</div>
+                  <div className="about-card-text">
+                    <div className="about-card-title">India-First Design</div>
+                    <div className="about-card-sub">Built for the unique complexities of the Indian B2B landscape.</div>
+                  </div>
+                </div>
+                <div className="about-card">
+                  <div className="about-card-icon">🧠</div>
+                  <div className="about-card-text">
+                    <div className="about-card-title">Pragmatic AI</div>
+                    <div className="about-card-sub">Applying machine learning where it adds genuine operational value.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
       {/* ── LOGOS ── */}
       <div className="logos">
@@ -874,6 +908,51 @@ export default function App() {
                 Start a conversation
               </a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section className="section bg-darker" id="testimonials">
+        <div className="section-inner">
+          <div className="section-header fade-in">
+            <p className="section-label">Client Stories</p>
+            <h2 className="section-title">Trusted by industry leaders</h2>
+          </div>
+          <div className="testimonials-grid">
+            {[
+              {
+                name: 'Rajesh Khanna',
+                role: 'Founder, Khanna Jewellery',
+                text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM they built allowed us to delegate sales follow-ups without losing that personal touch. A game-changer for Indian enterprises.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_1_1777719076155.png'
+              },
+              {
+                name: 'Priya Sharma',
+                role: 'CEO, Urban Threads',
+                text: 'We were struggling with inventory aging. Caratsense didn\'t just give us a dashboard; they researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_2_1777719091657.png'
+              },
+              {
+                name: 'Anil Mehta',
+                role: 'Director, Mehta Manufacturing',
+                text: 'The technical depth Caratsense brings is rare. They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_3_1777719105843.png'
+              }
+            ].map((t, i) => (
+              <div key={i} className={`testimonial-card fade-in fade-in-delay-${i}`}>
+                <div className="testimonial-header">
+                  <div className="testimonial-avatar">
+                    <img src={t.image} alt={t.name} />
+                  </div>
+                  <div className="testimonial-meta">
+                    <div className="testimonial-name">{t.name}</div>
+                    <div className="testimonial-role">{t.role}</div>
+                  </div>
+                </div>
+                <p className="testimonial-text">"{t.text}"</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
