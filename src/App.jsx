@@ -810,14 +810,20 @@ export default function App() {
           </div>
         </section>
 
-      {/* ── LOGOS ── */}
+      {/* ── LOGOS (Marquee) ── */}
       <div className="logos">
         <div className="logos-inner">
           <p className="logos-label">Built for businesses across every industry</p>
-          <div className="logos-grid">
-            {['Retail', 'Manufacturing', 'Real Estate', 'F&B', 'Jewellery', 'Hospitality', 'Specialty Chemicals', 'Building Materials', 'Watches', 'Aviation', 'Student Housing', 'Bakery', 'FMCG Distribution', 'Advertising & Exhibitions', 'Legal Services', 'Textile & Fashion', 'R&D'].map(l => (
-              <span key={l} className="logo-item">{l}</span>
-            ))}
+          <div className="marquee-container">
+            <div className="marquee-content">
+              {[
+                'Retail', 'Manufacturing', 'Real Estate', 'F&B', 'Jewellery', 'Hospitality', 'Specialty Chemicals', 'Building Materials', 'Watches', 'Aviation', 'Student Housing', 'Bakery', 'FMCG Distribution', 'Advertising & Exhibitions', 'Legal Services', 'Textile & Fashion', 'R&D',
+                // Duplicate for infinite loop
+                'Retail', 'Manufacturing', 'Real Estate', 'F&B', 'Jewellery', 'Hospitality', 'Specialty Chemicals', 'Building Materials', 'Watches', 'Aviation', 'Student Housing', 'Bakery', 'FMCG Distribution', 'Advertising & Exhibitions', 'Legal Services', 'Textile & Fashion', 'R&D'
+              ].map((l, i) => (
+                <span key={i} className="logo-item">{l}</span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -912,35 +918,107 @@ export default function App() {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ── */}
+      {/* ── TESTIMONIALS (Marquee) ── */}
       <section className="section bg-darker" id="testimonials">
         <div className="section-inner">
           <div className="section-header fade-in">
             <p className="section-label">Client Stories</p>
             <h2 className="section-title">Trusted by industry leaders</h2>
           </div>
-          <div className="testimonials-grid">
+        </div>
+        <div className="marquee-container testimonial-marquee">
+          <div className="marquee-content marquee-content--slow">
             {[
               {
                 name: 'Rajesh Khanna',
                 role: 'Founder, Khanna Jewellery',
-                text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM they built allowed us to delegate sales follow-ups without losing that personal touch. A game-changer for Indian enterprises.',
+                text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM allowed us to delegate sales follow-ups without losing that personal touch.',
                 image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_1_1777719076155.png'
               },
               {
                 name: 'Priya Sharma',
                 role: 'CEO, Urban Threads',
-                text: 'We were struggling with inventory aging. Caratsense didn\'t just give us a dashboard; they researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability.',
+                text: 'They researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability. A game-changer.',
                 image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_2_1777719091657.png'
               },
               {
                 name: 'Anil Mehta',
                 role: 'Director, Mehta Manufacturing',
-                text: 'The technical depth Caratsense brings is rare. They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.',
+                text: 'They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.',
                 image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_3_1777719105843.png'
+              },
+              {
+                name: 'Sameer Joshi',
+                role: 'Owner, Joshi Specialty Chemicals',
+                text: 'We now have a unified decisioning layer that pulls from our factory floor and sales team chats. Incredible efficiency and clarity.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_4_1777723611122.png'
+              },
+              {
+                name: 'Anjali Desai',
+                role: 'Director, Desai Building Materials',
+                text: 'They found bottlenecks in our supply chain we didn\'t know existed. The dashboard they built is now our most used management tool.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_5_1777723629867.png'
+              },
+              {
+                name: 'Karan Malhotra',
+                role: 'Founder, Malhotra Aviation',
+                text: 'Caratsense built us a native field app that actually works in low-connectivity areas. Truly bespoke engineering for Indian ops.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_6_1777723645322.png'
               }
             ].map((t, i) => (
-              <div key={i} className={`testimonial-card fade-in fade-in-delay-${i}`}>
+              <div key={i} className="testimonial-card testimonial-card--marquee">
+                <div className="testimonial-header">
+                  <div className="testimonial-avatar">
+                    <img src={t.image} alt={t.name} />
+                  </div>
+                  <div className="testimonial-meta">
+                    <div className="testimonial-name">{t.name}</div>
+                    <div className="testimonial-role">{t.role}</div>
+                  </div>
+                </div>
+                <p className="testimonial-text">"{t.text}"</p>
+              </div>
+            ))}
+            {/* Duplicate for infinite loop */}
+            {[
+              {
+                name: 'Rajesh Khanna',
+                role: 'Founder, Khanna Jewellery',
+                text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM allowed us to delegate sales follow-ups without losing that personal touch.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_1_1777719076155.png'
+              },
+              {
+                name: 'Priya Sharma',
+                role: 'CEO, Urban Threads',
+                text: 'They researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability. A game-changer.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_2_1777719091657.png'
+              },
+              {
+                name: 'Anil Mehta',
+                role: 'Director, Mehta Manufacturing',
+                text: 'They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_3_1777719105843.png'
+              },
+              {
+                name: 'Sameer Joshi',
+                role: 'Owner, Joshi Specialty Chemicals',
+                text: 'We now have a unified decisioning layer that pulls from our factory floor and sales team chats. Incredible efficiency and clarity.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_4_1777723611122.png'
+              },
+              {
+                name: 'Anjali Desai',
+                role: 'Director, Desai Building Materials',
+                text: 'They found bottlenecks in our supply chain we didn\'t know existed. The dashboard they built is now our most used management tool.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_5_1777723629867.png'
+              },
+              {
+                name: 'Karan Malhotra',
+                role: 'Founder, Malhotra Aviation',
+                text: 'Caratsense built us a native field app that actually works in low-connectivity areas. Truly bespoke engineering for Indian ops.',
+                image: '/Users/sahilshrivastava/.gemini/antigravity/brain/da71a15d-71da-41e6-b8d8-36fda6768322/testimonial_person_6_1777723645322.png'
+              }
+            ].map((t, i) => (
+              <div key={`dup-${i}`} className="testimonial-card testimonial-card--marquee">
                 <div className="testimonial-header">
                   <div className="testimonial-avatar">
                     <img src={t.image} alt={t.name} />

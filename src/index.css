@@ -2425,6 +2425,53 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   display: block;
 }
 
+/* ── Marquee (Infinite Loop) ── */
+.marquee-container {
+  overflow: hidden;
+  display: flex;
+  user-select: none;
+  mask-image: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0) 0%,
+    rgb(0, 0, 0) 12.5%,
+    rgb(0, 0, 0) 87.5%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+.marquee-content {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-around;
+  min-width: 100%;
+  gap: 40px;
+  animation: marquee 40s linear infinite;
+}
+
+.marquee-content--slow {
+  animation-duration: 80s;
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.logo-item {
+  white-space: nowrap;
+  padding: 0 20px;
+}
+
+.testimonial-marquee {
+  margin-top: 40px;
+  padding: 20px 0;
+}
+
+.testimonial-card--marquee {
+  width: 450px;
+  flex-shrink: 0;
+}
+
 /* ── About Section ── */
 .about-grid {
   display: grid;
