@@ -761,7 +761,7 @@ const useFadeIn = () => {
 // ── App ────────────────────────────────────────────────────────
 export default function App() {
   useFadeIn();
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
