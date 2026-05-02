@@ -710,7 +710,8 @@ const FloatingButtons = ({ theme, setTheme }) => {
 };
 
 // ── Nav ─────────────────────────────────────────────────────────────────────────
-const Nav = () => {
+// ── Nav ─────────────────────────────────────────────────────────────────────────
+const Nav = ({ onMenuOpen }) => {
   const navRef = useRef(null);
   useEffect(() => {
     const handler = () => {
@@ -726,7 +727,7 @@ const Nav = () => {
     <nav className="nav" ref={navRef}>
       <a href="#" className="nav-logo">
         <img src="/logo.jpeg" alt="CaratSense" className="nav-logo-img" />
-        Caratsense
+        <span>Caratsense</span>
       </a>
       <div className="nav-links">
         {['About', 'What We Build', 'Industries', 'Testimonials', 'Engagements', 'Insights'].map(l => (
@@ -737,10 +738,42 @@ const Nav = () => {
         <a href="#whatwebuild" className="btn btn-ghost">See Our Work</a>
         <a href="#engagements" className="btn btn-dark">
           <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 8a5 5 0 1 1 10 0A5 5 0 0 1 3 8zm5-3.5a.5.5 0 0 0-1 0V8a.5.5 0 0 0 .146.354l2 2a.5.5 0 0 0 .708-.708L8 8.293V4.5z"/></svg>
+          <span className="btn-text">Work With Us</span>
+        </a>
+        <button className="mobile-menu-toggle" onClick={onMenuOpen}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </nav>
+  );
+};
+
+const MobileMenu = ({ isOpen, onClose }) => {
+  const links = ['About', 'What We Build', 'Industries', 'Testimonials', 'Engagements', 'Insights'];
+  
+  return (
+    <div className={`mobile-menu-overlay ${isOpen ? 'active' : ''}`}>
+      <button className="mobile-menu-close" onClick={onClose}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div className="mobile-menu-links">
+        {links.map(l => (
+          <a key={l} href={`#${l.toLowerCase().replace(/\s+/g,'')}`} className="mobile-menu-link" onClick={onClose}>
+            {l}
+          </a>
+        ))}
+        <a href="#engagements" className="btn btn-dark" style={{ marginTop: 20, justifyContent: 'center' }} onClick={onClose}>
           Work With Us
         </a>
       </div>
-    </nav>
+    </div>
   );
 };
 
@@ -762,18 +795,29 @@ const useFadeIn = () => {
 export default function App() {
   useFadeIn();
   const [theme, setTheme] = useState('dark');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Lock scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isMenuOpen]);
+
   return (
     <>
       <FloatingButtons theme={theme} setTheme={setTheme} />
+      <MobileMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
       {/* Hero + all page content */}
       <div id="page-content" style={{ position: 'relative', zIndex: 1 }}>
-        <Nav />
+        <Nav onMenuOpen={() => setIsMenuOpen(true)} />
         <HeroOrganicNetwork />
 
         {/* ── ABOUT US ── */}

@@ -139,27 +139,36 @@ const HeroOrganicNetwork = () => {
   const expansionAnimRef = useRef({}); // { nodeId: 0..1 }
   const [phase, setPhase]         = useState(0);
   const [nodePositions, setNodePositions] = useState([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Init particles (Grid distribution to prevent clumping)
   useEffect(() => {
     const W = window.innerWidth, H = window.innerHeight;
-    const cols = Math.ceil(Math.sqrt(FLOAT_ICONS.length));
-    const rows = Math.ceil(FLOAT_ICONS.length / cols);
-    const cellW = (W - 160) / cols;
-    const cellH = (H - 160) / rows;
+    const iconCount = isMobile ? 12 : FLOAT_ICONS.length;
+    const icons = FLOAT_ICONS.slice(0, iconCount);
+    const cols = Math.ceil(Math.sqrt(icons.length));
+    const rows = Math.ceil(icons.length / cols);
+    const cellW = (W - (isMobile ? 60 : 160)) / cols;
+    const cellH = (H - (isMobile ? 60 : 160)) / rows;
 
-    particlesRef.current = FLOAT_ICONS.map((icon, i) => {
+    particlesRef.current = icons.map((icon, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
       return {
         icon,
-        homeX: 80 + col * cellW + Math.random() * cellW,
-        homeY: 80 + row * cellH + Math.random() * cellH,
+        homeX: (isMobile ? 30 : 80) + col * cellW + Math.random() * cellW,
+        homeY: (isMobile ? 30 : 80) + row * cellH + Math.random() * cellH,
         vx: (Math.random() - 0.5) * 0.35,
         vy: (Math.random() - 0.5) * 0.35,
       };
     });
-  }, []);
+  }, [isMobile]);
 
   // Scroll listener
   useEffect(() => {
@@ -209,7 +218,7 @@ const HeroOrganicNetwork = () => {
       const newPhase = p < C0 ? 0 : p < C1 ? 1 : p < E0 ? 2 : 3;
       setPhase(newPhase);
 
-      const HEX_R = Math.min(W, H) * 0.14;
+      const HEX_R = isMobile ? Math.min(W, H) * 0.22 : Math.min(W, H) * 0.14;
 
       // ── Particles ─────────────────────────────────────────────
       particlesRef.current.forEach((pt, i) => {
@@ -289,7 +298,7 @@ const HeroOrganicNetwork = () => {
 
           ctx.textAlign = 'center'; 
           ctx.textBaseline = 'middle';
-          const scale = 1;
+          const scale = isMobile ? 0.8 : 1;
           
           ctx.font = `600 ${22 * scale}px 'Inter', sans-serif`;
           ctx.fillStyle = `rgba(212,175,55,${hexAlpha * textProg})`;
@@ -318,7 +327,7 @@ const HeroOrganicNetwork = () => {
       // ── Network bonds & pulsing dots ─────────────────────────
       if (expandT > 0) {
         // Constrain NDIST: shortened by ~20% as requested
-        const NDIST = Math.min(W * 0.22, H * 0.25);
+        const NDIST = isMobile ? Math.min(W * 0.35, H * 0.35) : Math.min(W * 0.22, H * 0.25);
         const positions = [];
         
         // Track global activity for fading inactive bonds
@@ -361,7 +370,9 @@ const HeroOrganicNetwork = () => {
           // Draw expanded spider-web for this node
           const prog = expansionAnimRef.current[node.id] || 0;
           if (prog > 0.01) {
-            drawSpiderWeb(ctx, np, node, t, 0, positions, prog, 1, expansionAnimRef);
+            // Further reduce distances on mobile to prevent overflow
+            const mScale = isMobile ? 0.65 : 1;
+            drawSpiderWeb(ctx, np, node, t, 0, positions, prog, 1, expansionAnimRef, mScale);
           }
         });
 
@@ -389,7 +400,7 @@ const HeroOrganicNetwork = () => {
       <div className="hon-sticky">
         {/* Floating icon particles */}
         <div className="hon-particles-layer">
-          {FLOAT_ICONS.map((icon, i) => (
+          {(isMobile ? FLOAT_ICONS.slice(0, 12) : FLOAT_ICONS).map((icon, i) => (
             <div key={icon + i} ref={el => iconRefs.current[i] = el} className="hon-particle">
               <img src={`${CDN}${icon}.svg`} alt="" className="hon-particle-img" />
             </div>
@@ -401,7 +412,7 @@ const HeroOrganicNetwork = () => {
 
         {/* SVG overlay: clickable nodes */}
         {nodePositions.length > 0 && (
-          <svg className="hon-svg-overlay">
+          <svg className="hon-svg-overlay" onClick={() => togglePinned(null)}>
             <defs>
               <filter id="glow-node" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="4" result="blur"/>
@@ -487,17 +498,17 @@ const HeroOrganicNetwork = () => {
 };
 
 // ── Spider web canvas draw (called inside RAF) ─────────────────
-function drawSpiderWeb(ctx, origin, parentNode, t, depth, svgNodes, expandProg, parentAlpha, expansionAnimRef) {
+function drawSpiderWeb(ctx, origin, parentNode, t, depth, svgNodes, expandProg, parentAlpha, expansionAnimRef, mScale = 1) {
   const children = depth === 0 ? NODE_TREES[parentNode.id] : parentNode.children;
   if (!children || children.length === 0) return;
 
   const angleBase = parentNode.angle;
-  const spreadMax = 240 * Math.pow(0.85, depth); // Increased to prevent clutter
-  const spread    = Math.min(95 * Math.pow(0.85, depth), spreadMax / children.length);
+  const spreadMax = 240 * Math.pow(0.85, depth) * mScale; // Scale spread for mobile
+  const spread    = Math.min(95 * Math.pow(0.85, depth) * mScale, spreadMax / children.length);
   const startAng  = angleBase - spread * (children.length - 1) / 2;
   
-  // Base radius increased to push children further out, giving more breathing room
-  const baseR = 105 * Math.pow(0.85, depth);
+  // Base radius scaled for mobile
+  const baseR = 105 * Math.pow(0.85, depth) * mScale;
   const radii = [baseR, baseR * 0.95, baseR * 1.05, baseR * 0.9, baseR * 1.1];
 
   children.forEach((child, i) => {
@@ -540,7 +551,7 @@ function drawSpiderWeb(ctx, origin, parentNode, t, depth, svgNodes, expandProg, 
     if (child.children && child.children.length > 0 && depth < 4) {
       const childProg = expansionAnimRef.current[child.id] || 0;
       if (childProg > 0.01) {
-        drawSpiderWeb(ctx, cp, { ...parentNode, id: child.id, angle: ang, children: child.children }, t, depth + 1, svgNodes, childProg, expandProg * parentAlpha, expansionAnimRef);
+        drawSpiderWeb(ctx, cp, { ...parentNode, id: child.id, angle: ang, children: child.children }, t, depth + 1, svgNodes, childProg, expandProg * parentAlpha, expansionAnimRef, mScale);
       }
     }
   });
@@ -548,9 +559,10 @@ function drawSpiderWeb(ctx, origin, parentNode, t, depth, svgNodes, expandProg, 
 
 // ── SVG Node Circle ────────────────────────────────────────────
 const NodeCircle = ({ node, isExpanded, isPinned, onToggle, onEnter, onLeave }) => {
+  const isMobile = window.innerWidth < 768;
   const isOuter = node.depth === 0;
-  const R = isOuter ? (isExpanded ? 32 : 28) : 24;
-  const iconSize = isOuter ? 22 : 16;
+  const R = isOuter ? (isExpanded ? (isMobile ? 26 : 32) : (isMobile ? 22 : 28)) : (isMobile ? 18 : 24);
+  const iconSize = isOuter ? (isMobile ? 18 : 22) : (isMobile ? 12 : 16);
   const hasChildren = isOuter ? (NODE_TREES[node.id] || []).length > 0 : (node.children && node.children.length > 0);
   
   const opacity = node.opacity !== undefined ? node.opacity : 1;
@@ -586,24 +598,39 @@ const NodeCircle = ({ node, isExpanded, isPinned, onToggle, onEnter, onLeave }) 
         strokeWidth={isExpanded ? 2.2 : 1.4}
       />
 
-      {/* Icon image */}
+      {/* Icon image - Using foreignObject for better Safari support and reliable filtering */}
       {node.icon && (
-        <image
-          href={`${CDN}${node.icon}.svg`}
-          x={node.px - iconSize/2} y={node.py - iconSize/2 - (isOuter ? 3 : 2)}
-          width={iconSize} height={iconSize}
-          style={{ filter: `invert(1) sepia(1) saturate(0) brightness(2) hue-rotate(0deg)`, opacity: 0.85 }}
-        />
+        <foreignObject
+          x={node.px - iconSize/2}
+          y={node.py - iconSize/2 - (isOuter ? 3 : 2)}
+          width={iconSize}
+          height={iconSize}
+          style={{ pointerEvents: 'none' }}
+        >
+          <img
+            src={`${CDN}${node.icon}.svg`}
+            alt=""
+            style={{
+              width: '100%',
+              height: '100%',
+              display: 'block',
+              filter: 'brightness(0) invert(1)', // Reliable way to make icons white on dark bg
+              opacity: 0.85,
+              WebkitFilter: 'brightness(0) invert(1)' // Safari prefix
+            }}
+            onError={(e) => { e.target.style.display = 'none'; }}
+          />
+        </foreignObject>
       )}
 
       {/* Label below icon */}
-      <text x={node.px} y={node.py + R + (isOuter ? 8 : 7)}
+      <text x={node.px} y={node.py + R + (isOuter ? (isMobile ? 6 : 8) : (isMobile ? 5 : 7))}
         textAnchor="middle" dominantBaseline="middle"
-        fontSize={isOuter ? "8.5" : "7.5"} 
+        fontSize={isOuter ? (isMobile ? "7.5" : "8.5") : (isMobile ? "6.5" : "7.5")} 
         fontFamily="Inter,sans-serif" fontWeight={isOuter ? "700" : "500"}
         fill={node.color}>
         {node.label.split(' ').map((w, i) => (
-          <tspan key={i} x={node.px} dy={i === 0 ? 0 : 8}>{w}</tspan>
+          <tspan key={i} x={node.px} dy={i === 0 ? 0 : (isMobile ? 7 : 8)}>{w}</tspan>
         ))}
       </text>
 
