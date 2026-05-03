@@ -2,37 +2,49 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Html, Stars } from '@react-three/drei';
 import * as THREE from 'three';
+import { Folder, FileText, FileSpreadsheet, Database, HardDrive, Table } from 'lucide-react';
 
 const CDN = 'https://cdn.jsdelivr.net/npm/simple-icons@11.4.0/icons/';
 
+const CUSTOM_ICONS = {
+  folder: Folder,
+  file: FileText,
+  spreadsheet: FileSpreadsheet,
+  database: Database,
+  drive: HardDrive,
+  table: Table
+};
+
 const FLOAT_ICONS = [
-  'n8n', 'python', 'openai', 'supabase', 'claude', 'databricks', 'slack',
-  'gmail', 'amazonaws', 'salesforce', 'quickbooks', 'googlesheets', 'jira',
-  'elasticsearch', 'react', 'nodedotjs', 'docker', 'kubernetes', 'postgresql',
-  'redis', 'mongodb', 'stripe', 'github', 'googlecloud', 'flutter', 'grafana',
-  'notion', 'whatsapp', 'tensorflow', 'figma', 'shopify', 'airtable',
+  'microsoftexcel', 'googlesheets', 'snowflake', 'databricks',
+  'folder', 'file', 'spreadsheet', 'folder', 'file',
+  'microsoftexcel', 'folder', 'file', 'spreadsheet', 'folder',
+  'googlesheets', 'snowflake', 'folder', 'file', 'drive',
+  'microsoftexcel', 'databricks', 'folder', 'file', 'database',
+  'spreadsheet', 'folder', 'file', 'microsoftexcel', 'googlesheets',
+  'folder', 'file', 'snowflake', 'databricks'
 ];
 
 const NODE_DETAILS = {
-  industry: "Custom Linux distributions, tailored OS deployments, and secure field-ready hardware integrations built for the harshest industrial environments.",
-  aiml: "We deploy custom LLMs, computer vision, and predictive analytics pipelines fine-tuned exclusively on your proprietary data streams.",
-  whatsapp: "Automated WhatsApp flows, smart drip campaigns, and intelligent support bots for frictionless customer engagement.",
-  dashbi: "Real-time live-ops dashboards and executive BI tools that pull data from the tangled web to let you monitor KPIs at a glance.",
-  integ: "Seamlessly connect disparate systems—from Zoho and Tally to custom IoT sensors and legacy APIs, tying the web together.",
-  mobile: "Lightning-fast native and cross-platform mobile applications built for your on-the-ground field teams and end consumers.",
-  dataint: "Robust data pipelines turning messy CRM, spreadsheet, and raw machine data into a single, structured source of truth.",
-  scope: "Deep operational audits to find bottlenecks and architect scalable tech solutions before a single line of code is written."
+  industry: "Advanced Time Series analysis to forecast demand, seasonal trends, and hardware sensor failures with 99% accuracy.",
+  aiml: "Proprietary Sales Prediction engines that analyze historical patterns to optimize inventory and revenue growth.",
+  whatsapp: "End-to-end SaaS Platform development, from high-performance backends to intuitive user interfaces and multi-tenant architectures.",
+  dashbi: "Tailored Custom Model Configuration, fine-tuning neural networks and traditional ML models on your unique domain data.",
+  integ: "Edge-ready Computer Vision modules for automated quality control, security monitoring, and object recognition.",
+  mobile: "Scalable LLM Pipelines for document intelligence, automated customer support, and semantic search over your internal knowledge base.",
+  dataint: "Building modern Data Lakehouses on Snowflake and Databricks to provide a single, structured source of truth for your entire organization.",
+  scope: "Deep operational audits and strategic technical roadmaps to find bottlenecks and architect scalable tech solutions."
 };
 
 const PLANETS_DATA = [
-  { id: 'industry', label: 'Industry OS', color: '#a78bfa', distance: 5.0, speed: 0.15, size: 0.6, icon: 'linux' },
-  { id: 'aiml', label: 'AI & ML', color: '#D4AF37', distance: 7.0, speed: 0.12, size: 0.8, icon: 'openai' },
-  { id: 'whatsapp', label: 'WhatsApp Stack', color: '#25D366', distance: 9.0, speed: 0.1, size: 0.5, icon: 'whatsapp' },
-  { id: 'dashbi', label: 'Dashboards & BI', color: '#60a5fa', distance: 11.0, speed: 0.08, size: 0.7, icon: 'grafana' },
-  { id: 'integ', label: 'Integrations', color: '#f472b6', distance: 13.0, speed: 0.06, size: 0.5, icon: 'n8n' },
-  { id: 'mobile', label: 'Mobile Apps', color: '#fb923c', distance: 15.0, speed: 0.05, size: 0.6, icon: 'flutter' },
-  { id: 'dataint', label: 'Data Intelligence', color: '#4ade80', distance: 17.0, speed: 0.04, size: 0.8, icon: 'postgresql' },
-  { id: 'scope', label: 'Scope & Audit', color: '#38bdf8', distance: 19.0, speed: 0.03, size: 0.5, icon: 'notion' },
+  { id: 'industry', label: 'Time Series Prediction', mobileLabel: 'Time Series', color: '#a78bfa', distance: 5.0, speed: 0.15, size: 0.6, icon: 'pandas' },
+  { id: 'aiml', label: 'Sales Prediction', mobileLabel: 'Sales Analysis', color: '#D4AF37', distance: 7.0, speed: 0.12, size: 0.8, icon: 'salesforce' },
+  { id: 'whatsapp', label: 'SaaS Platforms', mobileLabel: 'SaaS', color: '#25D366', distance: 9.0, speed: 0.1, size: 0.5, icon: 'nextdotjs' },
+  { id: 'dashbi', label: 'Custom AI Models', mobileLabel: 'AI Models', color: '#60a5fa', distance: 11.0, speed: 0.08, size: 0.7, icon: 'pytorch' },
+  { id: 'integ', label: 'Computer Vision', mobileLabel: 'Vision AI', color: '#f472b6', distance: 13.0, speed: 0.06, size: 0.5, icon: 'opencv' },
+  { id: 'mobile', label: 'LLM Pipelines', mobileLabel: 'LLMs', color: '#fb923c', distance: 15.0, speed: 0.05, size: 0.6, icon: 'openai' },
+  { id: 'dataint', label: 'Data Lakehouse', mobileLabel: 'Data Lake', color: '#4ade80', distance: 17.0, speed: 0.04, size: 0.8, icon: 'databricks' },
+  { id: 'scope', label: 'Strategic Audit', mobileLabel: 'Audit', color: '#38bdf8', distance: 19.0, speed: 0.03, size: 0.5, icon: 'notion' },
 ];
 
 function OrbitRing({ radius }) {
@@ -44,17 +56,17 @@ function OrbitRing({ radius }) {
   );
 }
 
-function Planet({ data, isSelected, onClick, registerRef, visualProgressRef }) {
+function Planet({ data, isSelected, onClick, registerRef, visualProgressRef, isMobile, index }) {
   const ref = useRef();
   const labelRef = useRef();
-  const randomOffset = useMemo(() => Math.random() * Math.PI * 2, []);
+  const initialAngle = useMemo(() => (index / PLANETS_DATA.length) * Math.PI * 2, [index]);
 
   useFrame((state) => {
     if (!ref.current) return;
     const t = state.clock.getElapsedTime();
     const currentSpeed = isSelected ? data.speed * 0.05 : data.speed;
-    ref.current.position.x = Math.cos(t * currentSpeed + randomOffset) * data.distance;
-    ref.current.position.z = Math.sin(t * currentSpeed + randomOffset) * data.distance;
+    ref.current.position.x = Math.cos(t * currentSpeed + initialAngle) * data.distance;
+    ref.current.position.z = Math.sin(t * currentSpeed + initialAngle) * data.distance;
     ref.current.rotation.y += isSelected ? 0.01 : 0.005;
 
     if (labelRef.current && visualProgressRef) {
@@ -85,11 +97,11 @@ function Planet({ data, isSelected, onClick, registerRef, visualProgressRef }) {
           opacity: 0,
           transition: 'opacity 0.3s',
           color: 'rgba(255,255,255,0.9)',
-          fontSize: '12px',
+          fontSize: isMobile ? '10px' : '12px',
           fontFamily: 'Inter, sans-serif',
           fontWeight: 500,
           background: 'rgba(0,0,0,0.6)',
-          padding: '4px 10px',
+          padding: isMobile ? '2px 6px' : '4px 10px',
           borderRadius: '6px',
           backdropFilter: 'blur(4px)',
           whiteSpace: 'nowrap',
@@ -99,14 +111,14 @@ function Planet({ data, isSelected, onClick, registerRef, visualProgressRef }) {
           gap: '6px'
         }}>
           <img src={`${CDN}${data.icon}.svg`} alt="" style={{ width: '12px', height: '12px', filter: 'brightness(0) invert(1)' }} />
-          {data.label}
+          {isMobile ? data.mobileLabel : data.label}
         </div>
       </Html>
     </group>
   );
 }
 
-function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef }) {
+function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef, isMobile }) {
   const planetsRef = useRef({});
   const controlsRef = useRef();
   const groupRef = useRef();
@@ -114,7 +126,8 @@ function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef }) {
 
   useFrame((state) => {
     const vp = visualProgressRef ? visualProgressRef.current : 0;
-    const targetScale = vp < 0.4 ? 0 : Math.min(1, (vp - 0.4) / 0.3);
+    const mobileScaleFactor = isMobile ? 0.7 : 1.0;
+    const targetScale = vp < 0.4 ? 0 : Math.min(mobileScaleFactor, (vp - 0.4) / 0.3 * mobileScaleFactor);
     if (groupRef.current) {
       groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.1);
     }
@@ -145,7 +158,7 @@ function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef }) {
   });
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} position={isMobile ? [0, -5, 0] : [0, 0, 0]}>
       {/* enableZoom={false} prevents scrolling issues on the main page */}
       <OrbitControls
         ref={controlsRef}
@@ -173,7 +186,7 @@ function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef }) {
         </div> */}
       </Html>
 
-      {PLANETS_DATA.map((planet) => (
+      {PLANETS_DATA.map((planet, index) => (
         <group key={planet.id}>
           <OrbitRing radius={planet.distance} />
           <Planet
@@ -182,6 +195,8 @@ function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef }) {
             onClick={onSelectPlanet}
             registerRef={(id, ref) => { planetsRef.current[id] = ref; }}
             visualProgressRef={visualProgressRef}
+            isMobile={isMobile}
+            index={index}
           />
         </group>
       ))}
@@ -212,7 +227,13 @@ const HeroOrganicNetwork = () => {
   useEffect(() => {
     selectedIdRef.current = selectedId;
   }, [selectedId]);
-  const isMobile = window.innerWidth < 768;
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Initialize background HTML particles
   useEffect(() => {
@@ -315,11 +336,18 @@ const HeroOrganicNetwork = () => {
 
         {/* HTML Floating Icons (Phase 0 -> Phase 1) */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none' }}>
-          {(isMobile ? FLOAT_ICONS.slice(0, 12) : FLOAT_ICONS).map((icon, i) => (
-            <div key={icon + i} ref={el => iconRefs.current[i] = el} style={{ position: 'absolute', top: 0, left: 0 }}>
-              <img src={`${CDN}${icon}.svg`} alt="" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(1)' }} />
-            </div>
-          ))}
+          {(isMobile ? FLOAT_ICONS.slice(0, 12) : FLOAT_ICONS).map((icon, i) => {
+            const IconComp = CUSTOM_ICONS[icon];
+            return (
+              <div key={icon + i} ref={el => iconRefs.current[i] = el} style={{ position: 'absolute', top: 0, left: 0 }}>
+                {IconComp ? (
+                  <IconComp size={32} color="white" style={{ opacity: 0.8 }} />
+                ) : (
+                  <img src={`${CDN}${icon}.svg`} alt="" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(1)' }} />
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Phase 0: Hero Copy */}
@@ -331,14 +359,14 @@ const HeroOrganicNetwork = () => {
             <span className="dot" />
             SEE BEYOND
           </div>
-          <h1 className="hero-title" style={{ fontSize: '4rem', color: '#fff', margin: '20px 0', lineHeight: 1.1 }}>
-            We accelerate your<br />
-            <em style={{ color: '#fbbf24', fontStyle: 'normal' }}>business towards</em><br />
-            growth
+          <h1 className="hero-title" style={{ fontSize: isMobile ? '2.5rem' : '4rem', color: '#fff', margin: '20px 0', lineHeight: 1.1 }}>
+            Transforming your<br />
+            <em style={{ color: '#fbbf24', fontStyle: 'normal' }}>raw data into</em><br />
+            intelligence
           </h1>
-          <p className="hero-subtitle" style={{ color: '#aaa', fontSize: '1.2rem', marginBottom: '30px' }}>
-            CaratSense is a consultative AI and software studio. We go deep into your
-            operations, find where things are breaking down, and build tailored tech to fix it.
+          <p className="hero-subtitle" style={{ color: '#aaa', fontSize: isMobile ? '1rem' : '1.2rem', marginBottom: '30px' }}>
+            We don't just build apps; we engineer the pipelines that turn your scattered
+            Excel sheets, databases, and warehouse records into high-performance business assets.
           </p>
           <div className="hero-actions" style={{ display: 'flex', gap: '16px', justifyContent: 'center' }}>
             <a href="#engagements" className="btn btn-dark" style={{ background: '#fbbf24', color: '#000', padding: '12px 24px', borderRadius: '30px', textDecoration: 'none', fontWeight: 'bold' }}>
@@ -349,9 +377,12 @@ const HeroOrganicNetwork = () => {
         </div>
 
         {/* 3D Canvas (Scales up during Phase 1 -> Phase 2) */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0 }}>
-          <Canvas camera={{ position: [0, 20, 35], fov: 45 }}>
-            <SolarSystem selectedId={selectedId} onSelectPlanet={setSelectedId} visualProgressRef={visualProgressRef} />
+        <div style={{
+          position: 'absolute', top: 0, left: 0, width: '100%', height: isMobile ? '85vh' : '100%', zIndex: 0,
+          touchAction: 'pan-y' // Allow vertical scrolling on mobile
+        }}>
+          <Canvas camera={{ position: [0, 20, 35], fov: 45 }} style={{ touchAction: 'pan-y' }}>
+            <SolarSystem selectedId={selectedId} onSelectPlanet={setSelectedId} visualProgressRef={visualProgressRef} isMobile={isMobile} />
           </Canvas>
         </div>
 
@@ -370,8 +401,8 @@ const HeroOrganicNetwork = () => {
               <span style={{ width: '8px', height: '8px', background: '#fbbf24', borderRadius: '50%', marginRight: '8px' }} />
               EXPLORE
             </div>
-            <h1 style={{ fontSize: '4rem', color: '#fff', margin: 0, lineHeight: 1.1, fontFamily: 'Inter, sans-serif' }}>
-              We do <br /><span style={{ color: '#fbbf24' }}>crazy stuff</span>
+            <h1 style={{ fontSize: isMobile ? '2.5rem' : '4rem', color: '#fff', margin: 0, lineHeight: 1.1, fontFamily: 'Inter, sans-serif' }}>
+              We build <br /><span style={{ color: '#fbbf24' }}>Data Intelligence</span>
             </h1>
             <p style={{ color: '#aaa', fontSize: '1.2rem', marginTop: '20px', fontFamily: 'Inter, sans-serif' }}>
             </p>
@@ -400,8 +431,8 @@ const HeroOrganicNetwork = () => {
                       alt=""
                     />
                   </div>
-                  <h2 style={{ color: selectedPlanet.color, fontSize: '2.5rem', margin: 0, fontFamily: 'Inter, sans-serif' }}>
-                    {selectedPlanet.label}
+                  <h2 style={{ color: selectedPlanet.color, fontSize: isMobile ? '1.5rem' : '2.5rem', margin: 0, fontFamily: 'Inter, sans-serif' }}>
+                    {isMobile ? selectedPlanet.mobileLabel : selectedPlanet.label}
                   </h2>
                 </div>
 
