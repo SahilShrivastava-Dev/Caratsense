@@ -317,14 +317,14 @@ const CapabilityExplorer = () => {
   }, [isPaused]);
 
   return (
-    <div 
+    <div
       className="explorer-slider"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
       <div className="slider-viewport">
-        <div 
-          className="slider-track" 
+        <div
+          className="slider-track"
           style={{ transform: `translateX(-${active * 100}%)` }}
         >
           {CAPABILITIES.map((c, i) => (
@@ -336,14 +336,14 @@ const CapabilityExplorer = () => {
                   </div>
                   <div className="slide-glow-pulse" />
                 </div>
-                
+
                 <div className="slide-info">
                   <div className="slide-tag">Module {c.id}</div>
                   <h3 className="slide-title">{c.title}</h3>
                   <p className="slide-desc">{c.desc}</p>
                   <div className="slide-divider" />
                   <p className="slide-long">{c.detail}</p>
-                  
+
                   <a href="#startconversation" className="btn btn-dark" style={{ width: 'fit-content' }}>
                     Discuss Implementation
                   </a>
@@ -358,7 +358,7 @@ const CapabilityExplorer = () => {
       <div className="slider-dots">
         {CAPABILITIES.map((c, i) => (
           <div key={i} className="dot-wrapper">
-            <button 
+            <button
               className={`slider-dot ${active === i ? 'active' : ''}`}
               onClick={() => setActive(i)}
             />
@@ -1022,10 +1022,10 @@ export default function App() {
             <div className="conversation-block fade-in">
               <div className="conv-layout">
                 <div className="conv-lottie">
-                  <dotlottie-wc 
-                    src="https://lottie.host/aae85447-c777-49f3-a80f-ba42ab737339/KapxeB4dH9.lottie" 
-                    style={{ width: '240px', height: '240px' }} 
-                    autoplay 
+                  <dotlottie-wc
+                    src="https://lottie.host/aae85447-c777-49f3-a80f-ba42ab737339/KapxeB4dH9.lottie"
+                    style={{ width: '240px', height: '240px' }}
+                    autoplay
                     loop
                   />
                 </div>
