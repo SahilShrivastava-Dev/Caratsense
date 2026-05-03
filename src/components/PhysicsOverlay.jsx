@@ -8,10 +8,10 @@ const PhysicsOverlay = () => {
   // The actual UI text items we want floating
   const items = [
     { id: 'item1', text: 'caratsense AI.', width: 400, height: 60, cls: 'physics-text bold' },
-    { id: 'item2', text: 'instant estimation', width: 420, height: 60, cls: 'physics-text silver' },
-    { id: 'item3', text: 'itemized breakdowns', width: 480, height: 60, cls: 'physics-text' },
-    { id: 'item4', text: 'market values', width: 330, height: 60, cls: 'physics-text silver' },
-    { id: 'item5', text: 'precision metrics', width: 380, height: 60, cls: 'physics-text' },
+    { id: 'item2', text: 'WhatsApp automation', width: 460, height: 60, cls: 'physics-text silver' },
+    { id: 'item3', text: 'tally integration', width: 400, height: 60, cls: 'physics-text' },
+    { id: 'item4', text: 'demand forecasting', width: 430, height: 60, cls: 'physics-text silver' },
+    { id: 'item5', text: 'zero owner-dependency', width: 500, height: 60, cls: 'physics-text' },
   ];
 
   const [positions, setPositions] = useState({});

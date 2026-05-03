@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "caratsense-app"
-  }
+    "default": "caratsense-app",
+    "dev": "caratsense-app"
+  },
+  "targets": {},
+  "etags": {}
 }

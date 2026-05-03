@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import HeroOrganicNetwork from './components/HeroOrganicNetwork';
 import './index.css';
 
 // ── Gem SVG mark ──────────────────────────────────────────────
@@ -12,194 +13,7 @@ const GemMark = ({ size = 28 }) => (
   </svg>
 );
 
-// ── Cursor-reactive colored dot field + glow ───────────────────
-// Dots colored by proximity: gold at ~0–80px, blue at ~80–200px,
-// neutral gray beyond. A smooth lerped radial gradient spotlight
-// trails the cursor, mimicking the antigravity.google effect.
 
-const CursorDotField = () => {
-  const canvasRef = useRef(null);
-  const mouseRef  = useRef({ x: -9999, y: -9999 });
-  const glowRef   = useRef(null);
-  // Lerped position for the smooth glow div
-  const lerpRef   = useRef({ x: -9999, y: -9999 });
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const glowEl = glowRef.current;
-    if (!canvas || !glowEl) return;
-    const ctx = canvas.getContext('2d');
-    let animId;
-
-    // ── Mouse tracking ──────────────────────────────────────────
-    const onMouseMove = (e) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-    };
-    window.addEventListener('mousemove', onMouseMove);
-
-    // ── Grid constants ──────────────────────────────────────────
-    const SPACING      = 36;
-    const RADIUS       = 1.5;
-    const INFLUENCE    = 160;   // repulsion radius
-    const COLOR_INNER  = 80;    // gold zone radius
-    const COLOR_MID    = 200;   // blue zone radius
-    const MAX_PUSH     = 30;
-    const RETURN_SPEED = 0.055;
-    const DAMPING      = 0.70;
-
-    let dots = [];
-
-    const buildGrid = () => {
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
-      const cols = Math.ceil(canvas.width  / SPACING) + 1;
-      const rows = Math.ceil(canvas.height / SPACING) + 1;
-      dots = [];
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          dots.push({ ox: c * SPACING, oy: r * SPACING,
-                      x:  c * SPACING,  y: r * SPACING,
-                      vx: 0, vy: 0 });
-        }
-      }
-    };
-
-    buildGrid();
-    window.addEventListener('resize', buildGrid);
-
-    // ── Color helper: lerp between two RGBA arrays ──────────────
-    const lerpColor = (a, b, t) =>
-      a.map((v, i) => v + (b[i] - v) * t);
-
-    // Neutral, blue, gold colours as [r,g,b,a]
-    const COL_NEUTRAL = [100, 120, 160, 0.18];
-    const COL_BLUE    = [ 70, 120, 220, 0.55];
-    const COL_GOLD    = [212, 175,  55, 0.75];
-
-    // ── Main animation loop ─────────────────────────────────────
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const mx = mouseRef.current.x;
-      const my = mouseRef.current.y;
-
-      // Smooth lerp of the glow div toward cursor
-      const LERP = 0.08;
-      lerpRef.current.x += (mx - lerpRef.current.x) * LERP;
-      lerpRef.current.y += (my - lerpRef.current.y) * LERP;
-      const gx = lerpRef.current.x;
-      const gy = lerpRef.current.y;
-
-      // Update glow div center via CSS custom properties
-      glowEl.style.setProperty('--gx', `${gx}px`);
-      glowEl.style.setProperty('--gy', `${gy}px`);
-      // Fade in once cursor has moved
-      if (gx > -9000) glowEl.style.opacity = '1';
-
-      // Draw dots
-      dots.forEach(d => {
-        // Spring to origin
-        d.vx += (d.ox - d.x) * RETURN_SPEED;
-        d.vy += (d.oy - d.y) * RETURN_SPEED;
-        d.vx *= DAMPING;
-        d.vy *= DAMPING;
-
-        const cdx  = d.x - mx;
-        const cdy  = d.y - my;
-        const dist = Math.sqrt(cdx * cdx + cdy * cdy);
-
-        // Repulsion
-        if (dist < INFLUENCE && dist > 0) {
-          const force = (1 - dist / INFLUENCE);
-          const push  = force * MAX_PUSH;
-          d.vx += (cdx / dist) * push * 0.20;
-          d.vy += (cdy / dist) * push * 0.20;
-        }
-
-        d.x += d.vx;
-        d.y += d.vy;
-
-        // Color by distance
-        let col;
-        if (dist < COLOR_INNER) {
-          const t = dist / COLOR_INNER;
-          col = lerpColor(COL_GOLD, COL_BLUE, t);
-        } else if (dist < COLOR_MID) {
-          const t = (dist - COLOR_INNER) / (COLOR_MID - COLOR_INNER);
-          col = lerpColor(COL_BLUE, COL_NEUTRAL, t);
-        } else {
-          col = COL_NEUTRAL;
-        }
-
-        const r = Math.round(col[0]);
-        const g = Math.round(col[1]);
-        const b = Math.round(col[2]);
-        const a = col[3];
-
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, RADIUS, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
-        ctx.fill();
-      });
-
-      animId = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('resize', buildGrid);
-    };
-  }, []);
-
-  return (
-    <>
-      {/* Colored dot canvas */}
-      <canvas
-        ref={canvasRef}
-        style={{
-          position: 'fixed', top: 0, left: 0,
-          width: '100vw', height: '100vh',
-          pointerEvents: 'none', zIndex: 1,
-        }}
-      />
-
-      {/* Smooth radial gradient glow that follows the cursor */}
-      <div
-        ref={glowRef}
-        style={{
-          position: 'fixed', top: 0, left: 0,
-          width: '100vw', height: '100vh',
-          pointerEvents: 'none',
-          zIndex: 2,
-          opacity: 0,
-          transition: 'opacity 0.6s ease',
-          background: `radial-gradient(
-            600px circle at var(--gx, 50%) var(--gy, 50%),
-            rgba(212, 175, 55, 0.07)   0%,
-            rgba(100, 140, 230, 0.06) 35%,
-            rgba(150, 100, 220, 0.04) 60%,
-            transparent               80%
-          )`,
-        }}
-      />
-
-      {/* Static edge aura — soft blue inner glow around viewport edges */}
-      <div
-        style={{
-          position: 'fixed', top: 0, left: 0,
-          width: '100vw', height: '100vh',
-          pointerEvents: 'none', zIndex: 0,
-          boxShadow: 'inset 0 0 140px rgba(90, 130, 220, 0.10)',
-        }}
-      />
-    </>
-  );
-};
-
-// ── Starfield ──────────────────────────────────────────────────
 const Starfield = () => {
   const canvasRef = useRef(null);
 
@@ -246,6 +60,316 @@ const Starfield = () => {
   }, []);
 
   return <canvas ref={canvasRef} className="particles-canvas starfield" />;
+};
+
+// ── Neural Network Canvas ──────────────────────────────────────
+// An interactive, multi-layer neural network that pulses with the
+// cursor. Nodes activate on hover; signals propagate layer-by-layer.
+const NeuralNetworkCanvas = () => {
+  const canvasRef = useRef(null);
+  const stateRef = useRef({ mouse: { x: -9999, y: -9999 }, raf: null });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // ── Network architecture: [input, h1, h2, h3, output] ──────
+    const ARCH = [6, 9, 9, 7, 3];
+    const NODE_R = 7;
+    const PAD_X = 100;  // left/right padding
+    const PAD_Y = 48;   // top/bottom padding
+
+    // Per-layer colors [r,g,b]
+    const LAYER_COL = [
+      [212, 175, 55],  // gold  — Input
+      [160, 120, 230],  // purple
+      [80, 150, 230],  // blue
+      [40, 200, 190],  // teal
+      [0, 229, 180],  // mint  — Output
+    ];
+
+    let nodes = [];
+    let edges = [];
+    let nextSpike = Date.now() + 400;
+
+    // ── Build node + edge arrays ──────────────────────────────
+    const build = () => {
+      const W = canvas.width = canvas.offsetWidth;
+      const H = canvas.height = canvas.offsetHeight;
+      nodes = []; edges = [];
+
+      const layerX = ARCH.map((_, li) =>
+        PAD_X + (li / (ARCH.length - 1)) * (W - PAD_X * 2));
+
+      ARCH.forEach((count, li) => {
+        const x = layerX[li];
+        for (let ni = 0; ni < count; ni++) {
+          const y = count === 1
+            ? H / 2
+            : PAD_Y + (ni / (count - 1)) * (H - PAD_Y * 2);
+          nodes.push({ x, y, layer: li, activity: 0, glow: 0 });
+        }
+      });
+
+      // Full connections between adjacent layers
+      for (let li = 0; li < ARCH.length - 1; li++) {
+        const from = nodes.filter(n => n.layer === li);
+        const to = nodes.filter(n => n.layer === li + 1);
+        from.forEach(f => to.forEach(t =>
+          edges.push({ from: f, to: t, pulses: [] })
+        ));
+      }
+    };
+
+    build();
+
+    const onResize = () => build();
+    window.addEventListener('resize', onResize);
+
+    // ── Mouse tracking (relative to canvas) ──────────────────
+    const onMouse = e => {
+      const r = canvas.getBoundingClientRect();
+      stateRef.current.mouse = { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    window.addEventListener('mousemove', onMouse);
+
+    // ── Trigger a node: set activity + spawn pulses ───────────
+    const fire = (node, strength = 1) => {
+      node.activity = Math.min(1, node.activity + strength);
+      node.glow = Math.min(1, node.glow + strength);
+      edges
+        .filter(e => e.from === node)
+        .forEach(e => e.pulses.push({
+          t: 0,
+          speed: 0.007 + Math.random() * 0.007,
+          col: LAYER_COL[node.layer],
+          str: strength,
+        }));
+    };
+
+    // ── Main draw loop ─────────────────────────────────────────
+    const draw = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const { mouse } = stateRef.current;
+      const now = Date.now();
+
+      // Random input spike to keep animation alive
+      if (now > nextSpike) {
+        const inputs = nodes.filter(n => n.layer === 0);
+        fire(inputs[Math.floor(Math.random() * inputs.length)],
+          0.6 + Math.random() * 0.4);
+        nextSpike = now + 500 + Math.random() * 700;
+      }
+
+      // Cursor proximity on input + first hidden layer
+      nodes.forEach(n => {
+        if (n.layer > 1) return;
+        const dx = n.x - mouse.x, dy = n.y - mouse.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d < 90) {
+          const s = (1 - d / 90) * 0.35;
+          n.activity = Math.min(1, n.activity + s);
+          n.glow = Math.min(1, n.glow + s * 0.9);
+          if (Math.random() < 0.07) fire(n, s * 2.5);
+        }
+      });
+
+      // Decay node states
+      nodes.forEach(n => { n.activity *= 0.91; n.glow *= 0.87; });
+
+      // ── Draw edges + advance pulses ─────────────────────────
+      edges.forEach(({ from, to, pulses }) => {
+        const act = Math.max(from.activity, to.activity);
+
+        // Edge line
+        ctx.beginPath();
+        ctx.moveTo(from.x, from.y);
+        ctx.lineTo(to.x, to.y);
+        ctx.strokeStyle = `rgba(100,140,200,${0.06 + act * 0.16})`;
+        ctx.lineWidth = 0.7 + act * 1.2;
+        ctx.stroke();
+
+        // Pulses
+        for (let i = pulses.length - 1; i >= 0; i--) {
+          const p = pulses[i];
+          p.t += p.speed;
+
+          if (p.t >= 1) {
+            // Arrived — activate destination
+            to.activity = Math.min(1, to.activity + p.str * 0.6);
+            to.glow = Math.min(1, to.glow + p.str * 0.75);
+            // Propagate to next layer (probabilistic)
+            if (to.layer < ARCH.length - 1) {
+              edges
+                .filter(e => e.from === to && Math.random() < 0.65)
+                .forEach(e => e.pulses.push({
+                  t: 0,
+                  speed: 0.006 + Math.random() * 0.008,
+                  col: LAYER_COL[to.layer],
+                  str: p.str * 0.78,
+                }));
+            }
+            pulses.splice(i, 1);
+            continue;
+          }
+
+          // Draw pulse glow orb
+          const px = from.x + (to.x - from.x) * p.t;
+          const py = from.y + (to.y - from.y) * p.t;
+          const [r, g, b] = p.col;
+          const alpha = Math.sin(p.t * Math.PI) * p.str;
+
+          const g1 = ctx.createRadialGradient(px, py, 0, px, py, 14);
+          g1.addColorStop(0, `rgba(${r},${g},${b},${alpha * 0.85})`);
+          g1.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.beginPath(); ctx.arc(px, py, 14, 0, Math.PI * 2);
+          ctx.fillStyle = g1; ctx.fill();
+
+          ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, alpha * 2.2)})`;
+          ctx.fill();
+        }
+      });
+
+      // ── Draw nodes ─────────────────────────────────────────
+      nodes.forEach(n => {
+        const [r, g, b] = LAYER_COL[n.layer];
+        const { activity: act, glow } = n;
+
+        // Outer glow
+        if (glow > 0.04) {
+          const gr = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, NODE_R * 5 + glow * 22);
+          gr.addColorStop(0, `rgba(${r},${g},${b},${glow * 0.45})`);
+          gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R * 5 + glow * 22, 0, Math.PI * 2);
+          ctx.fillStyle = gr; ctx.fill();
+        }
+
+        // Node body gradient
+        const nb = ctx.createRadialGradient(n.x - 2, n.y - 2, 1, n.x, n.y, NODE_R);
+        nb.addColorStop(0, `rgba(${r},${g},${b},${0.35 + act * 0.65})`);
+        nb.addColorStop(1, `rgba(${r},${g},${b},${0.08 + act * 0.25})`);
+        ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R, 0, Math.PI * 2);
+        ctx.fillStyle = nb; ctx.fill();
+
+        // Ring
+        ctx.beginPath(); ctx.arc(n.x, n.y, NODE_R, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.3 + act * 0.65})`;
+        ctx.lineWidth = 1 + act * 1.5;
+        ctx.stroke();
+      });
+
+      stateRef.current.raf = requestAnimationFrame(draw);
+    };
+
+    // Only animate when the canvas is on screen
+    const obs = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        if (!stateRef.current.raf) draw();
+      } else {
+        cancelAnimationFrame(stateRef.current.raf);
+        stateRef.current.raf = null;
+      }
+    }, { threshold: 0.05 });
+    obs.observe(canvas);
+    draw();
+
+    return () => {
+      cancelAnimationFrame(stateRef.current.raf);
+      window.removeEventListener('mousemove', onMouse);
+      window.removeEventListener('resize', onResize);
+      obs.disconnect();
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: '100%', height: '100%', display: 'block' }}
+    />
+  );
+};
+
+// ── Capability Explorer ──────────────────────────────
+const CAPABILITIES = [
+  { id: '01', title: 'Industry Operating Systems', desc: 'End-to-end platforms covering orders, inventory, billing, customers, field ops, and reporting.', icon: '🏗️', detail: 'Centralize your entire supply chain. From procurement to last-mile delivery, we build the core software that runs your business.', accent: '#4f52b8' },
+  { id: '02', title: 'AI & ML Modules', desc: 'Computer vision, predictive analytics, NLP, forecasting, and anomaly detection.', icon: '🧠', detail: 'Move beyond basic reporting. Use ML to predict demand, automate quality control via vision, and extract insights from messy data.', accent: '#8b5cf6' },
+  { id: '03', title: 'WhatsApp Business Stack', desc: 'Managed campaigns, drip flows, order capture, support bots, and payment links.', icon: '💬', detail: 'WhatsApp is the nervous system of Indian trade. We build native Meta API integrations for automated ordering and customer support.', accent: '#25d366' },
+  { id: '04', title: 'Dashboards & BI', desc: 'Live ops dashboards, sales intelligence, and owner-level KPI rollups.', icon: '📊', detail: 'Real-time visibility for owners. Stop waiting for end-of-day reports. See your margins, inventory levels, and sales trends as they happen.', accent: '#e07b39' },
+  { id: '05', title: 'Integrations', desc: 'Seamlessly connecting Tally, Zoho, payment gateways, and IoT sensors.', icon: '🔌', detail: 'No more data silos. We build bridges between your existing accounting, CRM, and hardware systems for a unified data flow.', accent: '#2ba8a0' },
+  { id: '06', title: 'Mobile Applications', desc: 'Native Android and iOS apps for field teams, distributors, and customers.', icon: '📱', detail: 'Empower your workforce. Custom apps designed for low-connectivity warehouses, field sales, and direct-to-customer ordering.', accent: '#00e5ff' },
+  { id: '07', title: 'Data Intelligence Platforms', desc: 'Unified decisioning layer for Tally, CRM, and WhatsApp data.', icon: '📉', detail: 'We turn fragmented spreadsheets into a powerful intelligence layer that flags bottlenecks before they impact your bottom line.', accent: '#ef4444' },
+  { id: '08', title: 'Scope & Audit Work', desc: 'Operational audits, bottleneck mapping, and architecture flowcharts.', icon: '📋', detail: 'Strategy before software. We audit your current workflow to identify hidden inefficiencies and map out a clear digital roadmap.', accent: '#fbbf24' },
+];
+
+const CapabilityExplorer = () => {
+  const [active, setActive] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Auto-slide every 5 seconds
+  useEffect(() => {
+    if (isPaused) return;
+    const timer = setInterval(() => {
+      setActive(prev => (prev + 1) % CAPABILITIES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [isPaused]);
+
+  return (
+    <div
+      className="explorer-slider"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <div className="slider-viewport">
+        <div
+          className="slider-track"
+          style={{ transform: `translateX(-${active * 100}%)` }}
+        >
+          {CAPABILITIES.map((c, i) => (
+            <div key={i} className="capability-slide">
+              <div className="slide-content">
+                <div className="slide-visual">
+                  <div className="explorer-icon-box">
+                    <span role="img" aria-label={c.title}>{c.icon}</span>
+                  </div>
+                  <div className="slide-glow-pulse" />
+                </div>
+
+                <div className="slide-info">
+                  <div className="slide-tag">Module {c.id}</div>
+                  <h3 className="slide-title">{c.title}</h3>
+                  <p className="slide-desc">{c.desc}</p>
+                  <div className="slide-divider" />
+                  <p className="slide-long">{c.detail}</p>
+
+                  <a href="#startconversation" className="btn btn-dark" style={{ width: 'fit-content' }}>
+                    Discuss Implementation
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation Dots */}
+      <div className="slider-dots">
+        {CAPABILITIES.map((c, i) => (
+          <div key={i} className="dot-wrapper">
+            <button
+              className={`slider-dot ${active === i ? 'active' : ''}`}
+              onClick={() => setActive(i)}
+            />
+            <div className="dot-tooltip">
+              {c.title.split(' ').slice(0, 3).join(' ')}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 // ── Mock UI Components (Interactive) ──────────────────────────
@@ -397,7 +521,7 @@ const BreakdownUI = () => {
   const [hovered, setHovered] = useState(null);
   const [chartHovered, setChartHovered] = useState(null);
   const bars = [40, 55, 35, 60, 45, 70, 55, 80, 65, 90, 75, 100];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   return (
     <div className="mock-ui dark">
@@ -564,26 +688,26 @@ const MarketUI = () => {
 // ── FAB Icon SVGs ──────────────────────────────────────────────
 const SunIcon = () => (
   <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
-    <circle cx="12" cy="12" r="4"/>
+    <circle cx="12" cy="12" r="4" />
     <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
-      stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
   </svg>
 );
 const MoonIcon = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
   </svg>
 );
 const InvertIcon = () => (
   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <circle cx="12" cy="12" r="9"/>
-    <path d="M12 3v18"/>
-    <path d="M12 3a9 9 0 010 18" fill="currentColor" stroke="none"/>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 3v18" />
+    <path d="M12 3a9 9 0 010 18" fill="currentColor" stroke="none" />
   </svg>
 );
 const ChevronUpIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <path d="M18 15l-6-6-6 6"/>
+    <path d="M18 15l-6-6-6 6" />
   </svg>
 );
 
@@ -597,7 +721,7 @@ const FloatingButtons = ({ theme, setTheme }) => {
   useEffect(() => {
     const onScroll = () => {
       const docH = document.documentElement.scrollHeight - window.innerHeight;
-      const pct  = docH > 0 ? window.scrollY / docH : 0;
+      const pct = docH > 0 ? window.scrollY / docH : 0;
       setScrollPct(pct);
       setShowTop(pct > 0.15);
     };
@@ -612,7 +736,7 @@ const FloatingButtons = ({ theme, setTheme }) => {
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   // Button colours adapt: light bg → dark FAB; dark/invert bg → light FAB
-  const fabBg    = theme === 'light' ? '#0d0d0d' : '#f0f2f5';
+  const fabBg = theme === 'light' ? '#0d0d0d' : '#f0f2f5';
   const fabColor = theme === 'light' ? '#f0f2f5' : '#0d0d0d';
   const fabShadow = theme === 'light'
     ? '0 4px 24px rgba(0,0,0,0.22)'
@@ -638,11 +762,11 @@ const FloatingButtons = ({ theme, setTheme }) => {
         onClick={cycleTheme}
         title={THEME_LABEL[theme]}
         style={{ ...fabBase, bottom: 24, left: 24 }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.06)'; e.currentTarget.style.boxShadow = fabShadow.replace('0.22','0.35'); }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px) scale(1.06)'; e.currentTarget.style.boxShadow = fabShadow.replace('0.22', '0.35'); }}
         onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = fabShadow; }}
       >
-        {theme === 'light'  && <SunIcon />}
-        {theme === 'dark'   && <MoonIcon />}
+        {theme === 'light' && <SunIcon />}
+        {theme === 'dark' && <MoonIcon />}
         {theme === 'invert' && <InvertIcon />}
       </button>
 
@@ -657,8 +781,8 @@ const FloatingButtons = ({ theme, setTheme }) => {
           pointerEvents: showTop ? 'auto' : 'none',
           transform: showTop ? 'translateY(0)' : 'translateY(10px)',
         }}
-        onMouseEnter={e => { if (showTop) { e.currentTarget.style.transform = 'translateY(-2px) scale(1.06)'; }}}
-        onMouseLeave={e => { if (showTop) { e.currentTarget.style.transform = 'translateY(0)'; }}}
+        onMouseEnter={e => { if (showTop) { e.currentTarget.style.transform = 'translateY(-2px) scale(1.06)'; } }}
+        onMouseLeave={e => { if (showTop) { e.currentTarget.style.transform = 'translateY(0)'; } }}
       >
         <ChevronUpIcon />
       </button>
@@ -667,7 +791,8 @@ const FloatingButtons = ({ theme, setTheme }) => {
 };
 
 // ── Nav ─────────────────────────────────────────────────────────────────────────
-const Nav = () => {
+// ── Nav ─────────────────────────────────────────────────────────────────────────
+const Nav = ({ onMenuOpen }) => {
   const navRef = useRef(null);
   useEffect(() => {
     const handler = () => {
@@ -682,26 +807,59 @@ const Nav = () => {
   return (
     <nav className="nav" ref={navRef}>
       <a href="#" className="nav-logo">
-        <GemMark size={28} />
-        Caratsense
+        <img src="/logo.jpeg" alt="CaratSense" className="nav-logo-img" />
+        <span>Caratsense</span>
       </a>
       <div className="nav-links">
-        {['Product', 'Use Cases', 'Pricing', 'Blog', 'Docs'].map(l => (
-          <a key={l} href={`#${l.toLowerCase().replace(' ','')}`} className="nav-link">{l}</a>
+        {['What We Build', 'Testimonials', 'Start Conversation'].map(l => (
+          <a key={l} href={`#${l.toLowerCase().replace(/\s+/g, '')}`} className="nav-link">{l}</a>
         ))}
       </div>
       <div className="nav-actions">
-        <a href="#pricing" className="btn btn-ghost">Request Demo</a>
-        <a href="#pricing" className="btn btn-dark">
-          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 8a5 5 0 1 1 10 0A5 5 0 0 1 3 8zm5-3.5a.5.5 0 0 0-1 0V8a.5.5 0 0 0 .146.354l2 2a.5.5 0 0 0 .708-.708L8 8.293V4.5z"/></svg>
-          Get Started
+        <a href="#whatwebuild" className="btn btn-ghost">See Our Work</a>
+        <a href="#startconversation" className="btn btn-dark">
+          <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 8a5 5 0 1 1 10 0A5 5 0 0 1 3 8zm5-3.5a.5.5 0 0 0-1 0V8a.5.5 0 0 0 .146.354l2 2a.5.5 0 0 0 .708-.708L8 8.293V4.5z" /></svg>
+          <span className="btn-text">Start Conversation</span>
         </a>
+        <button className="mobile-menu-toggle" onClick={onMenuOpen}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </nav>
   );
 };
 
-// ── Scroll-fade hook ───────────────────────────────────────────
+const MobileMenu = ({ isOpen, onClose }) => {
+  const links = ['What We Build', 'Testimonials', 'Start Conversation'];
+
+  return (
+    <div className={`mobile-menu-overlay ${isOpen ? 'active' : ''}`}>
+      <button className="mobile-menu-close" onClick={onClose}>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div className="mobile-menu-links">
+        {links.map(l => (
+          <a key={l} href={`#${l.toLowerCase().replace(/\s+/g, '')}`} className="mobile-menu-link" onClick={onClose}>
+            {l}
+          </a>
+        ))}
+        <a href="#startconversation" className="btn btn-dark" style={{ marginTop: 20, justifyContent: 'center' }} onClick={onClose}>
+          Start Conversation
+        </a>
+      </div>
+    </div>
+  );
+};
+
+// ── Workflow Showcase ──────────────────────────────────────────
+// ── Workflow Showcase ──────────────────────────────────────────
 const useFadeIn = () => {
   useEffect(() => {
     const els = document.querySelectorAll('.fade-in');
@@ -717,370 +875,247 @@ const useFadeIn = () => {
 // ── App ────────────────────────────────────────────────────────
 export default function App() {
   useFadeIn();
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState('dark');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPageLoading, setIsPageLoading] = useState(true);
+
+  useEffect(() => {
+    const handleLoad = () => {
+      // Small delay to ensure smooth transition
+      setTimeout(() => setIsPageLoading(false), 800);
+    };
+
+    if (document.readyState === 'complete') {
+      handleLoad();
+    } else {
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Lock scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [isMenuOpen]);
+
   return (
     <>
-      {/* Cursor effects + FABs — outside the invertable zone */}
-      <CursorDotField />
+      <div className={`loader-overlay ${!isPageLoading ? 'fade-out' : ''}`}>
+        <dotlottie-wc
+          src="https://lottie.host/9eda103f-d44d-426f-ada1-ca59acc009ce/fjs6qAMHJ1.lottie"
+          style={{ width: '300px', height: '300px' }}
+          autoplay
+          loop
+        />
+      </div>
+
       <FloatingButtons theme={theme} setTheme={setTheme} />
+      <MobileMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
 
-      {/* All page content — CSS inverts this in 'invert' theme */}
-      <div id="page-content">
-      <Nav />
+      {/* Hero + all page content */}
+      <div id="page-content" style={{ position: 'relative', zIndex: 1, opacity: isPageLoading ? 0 : 1, transition: 'opacity 0.5s ease' }}>
+        <Nav onMenuOpen={() => setIsMenuOpen(true)} />
+        <HeroOrganicNetwork />
 
-      {/* ── HERO ── */}
-      <section className="hero" id="product">
-        <div className="hero-content">
-          <div className="hero-badge fade-in">
-            <span className="dot" />
-            Now with real-time market intelligence
-          </div>
-          <h1 className="hero-title fade-in fade-in-delay-1">
-            Experience clarity with<br />
-            <em>AI-powered jewelry</em><br />
-            estimation
-          </h1>
-          <p className="hero-subtitle fade-in fade-in-delay-2">
-            Caratsense is the intelligence layer for gemstone professionals. Instant AI valuations, itemized breakdowns, and live market pricing — engineered for accuracy at scale.
-          </p>
-          <div className="hero-actions fade-in fade-in-delay-3">
-            <a href="#pricing" className="btn btn-dark">
-              <svg viewBox="0 0 16 16" fill="currentColor" width="16" height="16"><path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm0 1a6 6 0 1 0 0 12A6 6 0 0 0 8 2zm-.5 4a.5.5 0 0 1 1 0v3.293l1.854 1.853a.5.5 0 0 1-.708.708L7.5 9.707V6z"/></svg>
-              Start Free Trial
-            </a>
-            <a href="#usecases" className="btn btn-ghost">Explore use cases</a>
-          </div>
-        </div>
-        <div className="scroll-indicator" aria-hidden="true">
-          <div className="scroll-line" />
-        </div>
-      </section>
-
-      {/* ── LOGOS ── */}
-      <div className="logos">
-        <div className="logos-inner">
-          <p className="logos-label">Trusted by professionals across the jewelry industry</p>
-          <div className="logos-grid">
-            {["Sotheby's Gems", 'De Beers Select', "Christie's JW", 'Tiffany Partners', 'GIA Alumni', 'Antwerp Exchange'].map(l => (
-              <span key={l} className="logo-item">{l}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── STATEMENT ── */}
-      <section className="statement">
-        <div className="statement-inner">
-          <p className="statement-label">Our Mission</p>
-          <p className="statement-text">
-            Caratsense is our <strong>AI estimation engine</strong>, evolving jewelry appraisal<br />
-            into the data-first era — for professionals who can't afford to be wrong.
-          </p>
-        </div>
-      </section>
-
-      {/* ── FEATURES ── */}
-      <section className="section" id="usecases">
-        <div className="section-inner">
-          <div className="section-header fade-in">
-            <p className="section-label">Core Platform</p>
-            <h2 className="section-title">Everything your appraisal workflow needs</h2>
-            <p className="section-desc">One unified platform for instant AI estimation, deep market data, and audit-ready outputs.</p>
-          </div>
-
-          {/* Feature 1 */}
-          <div className="feature-row fade-in">
-            <div className="feature-text">
-              <span className="feature-tag">Instant AI Estimation</span>
-              <h3 className="feature-heading">Deep AI Analysis Core</h3>
-              <p className="feature-body">
-                Caratsense's estimation engine identifies gemstone type, cut quality, clarity grade, and color from structured inputs — delivering a certified market value in under 2 seconds with provenance-aware pricing.
-              </p>
-              <a href="#" className="feature-link">
-                See how it works
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-              </a>
+        {/* ── WHAT WE BUILD (INTERACTIVE EXPLORER) ── */}
+        <section className="section explorer-section" id="whatwebuild">
+          <div className="section-inner">
+            <div className="section-header fade-in" style={{ marginBottom: 40 }}>
+              <p className="section-label">Core Capabilities</p>
+              <h2 className="section-title">High-Performance Operational Systems</h2>
+              <p className="section-desc">We build the nervous system for your business. Hover over a module to explore the architecture.</p>
             </div>
-            <div className="feature-preview">
-              <EstimationUI />
+
+            <div className="explorer-container fade-in">
+              <CapabilityExplorer />
             </div>
           </div>
+        </section>
 
-          {/* Feature 2 */}
-          <div className="feature-row reverse fade-in">
-            <div className="feature-text">
-              <span className="feature-tag">Itemized Breakdowns</span>
-              <h3 className="feature-heading">Higher-level cost intelligence</h3>
-              <p className="feature-body">
-                Move beyond single-figure quotes. Caratsense delivers a full itemized breakdown — stone, setting, craft, and market index — presented as a trustworthy artifact your clients can actually read.
-              </p>
-              <a href="#" className="feature-link">
-                Explore breakdowns
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-              </a>
-            </div>
-            <div className="feature-preview dark">
-              <BreakdownUI />
-            </div>
-          </div>
-
-          {/* Feature 3 */}
-          <div className="feature-row fade-in">
-            <div className="feature-text">
-              <span className="feature-tag">Market Intelligence</span>
-              <h3 className="feature-heading">Live market data, always current</h3>
-              <p className="feature-body">
-                Real-time bid/ask pricing across diamond, ruby, sapphire, and emerald categories. Synchronized with major clearing venues — Antwerp, Hong Kong, NY — for pricing you can stand behind.
-              </p>
-              <a href="#" className="feature-link">
-                View market data
-                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
-              </a>
-            </div>
-            <div className="feature-preview">
-              <MarketUI />
-            </div>
-          </div>
-
-          {/* Feature 4 — full width statement row */}
-          <div className="feature-row fade-in" style={{ gridTemplateColumns: '1fr', textAlign: 'center', padding: '80px 0 40px' }}>
-            <div className="feature-text" style={{ maxWidth: 580, margin: '0 auto' }}>
-              <span className="feature-tag">Multi-source Agents</span>
-              <h3 className="feature-heading">An appraisal-first experience</h3>
-              <p className="feature-body">
-                Run parallel estimations across multiple lots simultaneously. From one central dashboard, manage batch submissions, export GIA-compatible reports, and integrate direct API access into your existing ERP.
-              </p>
-              <a href="#pricing" className="btn btn-dark" style={{ marginTop: 8, display: 'inline-flex' }}>
-                Explore the platform
-              </a>
+        {/* ── SECTORS MARQUEE ── */}
+        <div className="logos sectors-marquee">
+          <div className="logos-inner">
+            <p className="logos-label">Delivering results across every major industry</p>
+            <div className="marquee-container">
+              <div className="marquee-content marquee-content--fast">
+                {[
+                  'Retail', 'Manufacturing', 'Real Estate', 'F&B', 'Jewellery', 'Hospitality', 'Specialty Chemicals', 'Building Materials', 'Watches', 'Aviation', 'Student Housing', 'Bakery', 'FMCG Distribution', 'Advertising & Exhibitions', 'Legal Services', 'Textile & Fashion', 'R&D',
+                  // Duplicate for infinite loop
+                  'Retail', 'Manufacturing', 'Real Estate', 'F&B', 'Jewellery', 'Hospitality', 'Specialty Chemicals', 'Building Materials', 'Watches', 'Aviation', 'Student Housing', 'Bakery', 'FMCG Distribution', 'Advertising & Exhibitions', 'Legal Services', 'Textile & Fashion', 'R&D'
+                ].map((l, i) => (
+                  <span key={i} className="logo-item">{l}</span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* ── TRUST ── */}
-      <section className="trust">
-        <div className="trust-inner">
-          <div className="fade-in">
-            <p className="trust-label">Built for Trust</p>
-            <h2 className="trust-title">Engineered for professionals in the data-first era</h2>
-            <p className="trust-body">
-              Caratsense is purpose-built for certified gemologists, independent appraisers, luxury auction houses, and insurance underwriters — to any professional who requires defensible, audit-ready valuations.
+        {/* ── TESTIMONIALS (MARQUEE) ── */}
+        <section className="section bg-darker" id="testimonials">
+          <div className="section-inner">
+            <div className="section-header fade-in">
+              <p className="section-label">Client Stories</p>
+              <h2 className="section-title">Trusted by industry leaders</h2>
+            </div>
+          </div>
+
+          <div className="marquee-container testimonial-marquee fade-in" style={{ marginTop: 40 }}>
+            <div className="marquee-content marquee-content--slow">
+              {[
+                { name: 'Rajesh Khanna', role: 'Founder, Khanna Jewellery', text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM allowed us to delegate sales follow-ups without losing that personal touch.', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Priya Sharma', role: 'CEO, Urban Threads', text: 'They researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability. A game-changer.', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Anil Mehta', role: 'Director, Mehta Manufacturing', text: 'They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Sameer Joshi', role: 'Owner, Joshi Specialty Chemicals', text: 'We now have a unified decisioning layer that pulls from our factory floor and sales team chats. Incredible efficiency and clarity.', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Anjali Desai', role: 'Director, Desai Building Materials', text: 'They found bottlenecks in our supply chain we didn\'t know existed. The dashboard they built is now our most used management tool.', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Karan Malhotra', role: 'Founder, Malhotra Aviation', text: 'Caratsense built us a native field app that actually works in low-connectivity areas. Truly bespoke engineering for Indian ops.', image: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?q=80&w=120&h=120&auto=format&fit=crop' }
+              ].map((t, i) => (
+                <div key={i} className="testimonial-card testimonial-card--marquee">
+                  <div className="testimonial-header">
+                    <div className="testimonial-avatar">
+                      <img src={t.image} alt={t.name} />
+                    </div>
+                    <div className="testimonial-meta">
+                      <div className="testimonial-name">{t.name}</div>
+                      <div className="testimonial-role">{t.role}</div>
+                    </div>
+                  </div>
+                  <p className="testimonial-text">"{t.text}"</p>
+                </div>
+              ))}
+              {/* Duplicate for loop */}
+              {[
+                { name: 'Rajesh Khanna', role: 'Founder, Khanna Jewellery', text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM allowed us to delegate sales follow-ups without losing that personal touch.', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Priya Sharma', role: 'CEO, Urban Threads', text: 'They researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability. A game-changer.', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Anil Mehta', role: 'Director, Mehta Manufacturing', text: 'They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Sameer Joshi', role: 'Owner, Joshi Specialty Chemicals', text: 'We now have a unified decisioning layer that pulls from our factory floor and sales team chats. Incredible efficiency and clarity.', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Anjali Desai', role: 'Director, Desai Building Materials', text: 'They found bottlenecks in our supply chain we didn\'t know existed. The dashboard they built is now our most used management tool.', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=120&h=120&auto=format&fit=crop' },
+                { name: 'Karan Malhotra', role: 'Founder, Malhotra Aviation', text: 'Caratsense built us a native field app that actually works in low-connectivity areas. Truly bespoke engineering for Indian ops.', image: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?q=80&w=120&h=120&auto=format&fit=crop' }
+              ].map((t, i) => (
+                <div key={`dup-${i}`} className="testimonial-card testimonial-card--marquee">
+                  <div className="testimonial-header">
+                    <div className="testimonial-avatar">
+                      <img src={t.image} alt={t.name} />
+                    </div>
+                    <div className="testimonial-meta">
+                      <div className="testimonial-name">{t.name}</div>
+                      <div className="testimonial-role">{t.role}</div>
+                    </div>
+                  </div>
+                  <p className="testimonial-text">"{t.text}"</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── START CONVERSATION ── */}
+        <section className="section" id="startconversation">
+          <div className="section-inner">
+            <div className="conversation-block fade-in">
+              <div className="conv-layout">
+                <div className="conv-lottie">
+                  <dotlottie-wc
+                    src="https://lottie.host/aae85447-c777-49f3-a80f-ba42ab737339/KapxeB4dH9.lottie"
+                    style={{ width: '240px', height: '240px' }}
+                    autoplay
+                    loop
+                  />
+                </div>
+                <div className="conv-text">
+                  <p className="section-label" style={{ color: 'var(--accent-amber)' }}>Let's Talk</p>
+                  <h2 className="section-title">Ready to build?</h2>
+                  <p className="section-desc">
+                    If you're looking for custom solutions, data privacy, robust software architecture, reliable customer support, or a proven reputation among industry leaders — let's start the conversation.
+                  </p>
+                </div>
+                <div className="conv-cta-box">
+                  <a
+                    href="https://api.whatsapp.com/send/?phone=919309137416&text=Hi%2C+I+want+to+build+custom+operational+software+for+my+business&type=phone_number&app_absent=0"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn btn-gold btn-large"
+                  >
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                      <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766 0-3.18-2.587-5.771-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.747-2.874-2.512-2.96-2.626-.087-.115-.708-.943-.708-1.799 0-.856.448-1.277.607-1.45.159-.174.347-.218.463-.218.116 0 .232.001.332.005.108.004.254-.041.398.305.144.347.491 1.199.535 1.286.044.086.073.187.015.303-.059.117-.088.19-.174.29-.087.101-.183.226-.261.303-.098.097-.2.202-.085.4.115.197.51.84 1.092 1.357.75.666 1.381.872 1.577.971.197.101.312.086.426-.044.115-.13.491-.572.621-.766.13-.194.26-.164.441-.098.182.066 1.151.54 1.347.636.197.097.327.144.373.226.047.083.047.48-.097.885z" />
+                    </svg>
+                    Start Conversation
+                  </a>
+                  <p className="cta-sub">Connect with our Team</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── FOOTER CTA ── */}
+        <div className="footer-cta">
+          <Starfield />
+          <div className="footer-cta-inner">
+            <div className="footer-cta-logo">
+              <img src="/logo.jpeg" alt="CaratSense" className="footer-cta-logo-img" />
+              Caratsense
+            </div>
+            <h2 className="footer-cta-title">Let's build systems that actually fit your business.</h2>
+            <p className="footer-cta-sub">
+              Tell us where your business is breaking down. We'll research it, map it, and build the right solution. Contact us at <strong>vk@caratsense.in</strong> or call <strong>+91 93091 37416</strong>.
             </p>
-            <a href="#pricing" className="btn btn-gold">Request enterprise access</a>
-          </div>
-          <div className="fade-in fade-in-delay-1">
-            <div className="trust-stats" style={{ marginBottom: 36 }}>
-              {[
-                { val: '99.4%', label: 'Estimation accuracy on certified stones' },
-                { val: '<2s', label: 'Average AI valuation turnaround' },
-                { val: '12M+', label: 'Gemstones in our pricing corpus' },
-                { val: '50+', label: 'Market venues integrated globally' },
-              ].map((s, i) => (
-                <div key={i} className="trust-stat">
-                  <div className="trust-stat-val">{s.val}</div>
-                  <div className="trust-stat-label">{s.label}</div>
-                </div>
-              ))}
-            </div>
-            <div className="trust-visual">
-              {[
-                { icon: '🔒', title: 'SOC 2 Type II Certified', sub: 'Your data never trains our models' },
-                { icon: '📋', title: 'GIA-compatible Outputs', sub: 'Export directly to your reporting suite' },
-                { icon: '🌐', title: 'Global Market Coverage', sub: '50+ venues · 24/7 live feeds' },
-              ].map((c, i) => (
-                <div key={i} className="trust-card">
-                  <div className="trust-card-icon">{c.icon}</div>
-                  <div className="trust-card-text">
-                    <div className="trust-card-title">{c.title}</div>
-                    <div className="trust-card-sub">{c.sub}</div>
-                  </div>
-                </div>
-              ))}
+            <div className="footer-cta-actions">
+              <a href="#" className="btn btn-gold">Book a Discovery Call</a>
+              <a href="#" className="btn btn-outline-dark">See What We Build</a>
             </div>
           </div>
         </div>
-      </section>
 
-      {/* ── PRICING ── */}
-      <section className="pricing" id="pricing">
-        <div className="pricing-inner">
-          <div className="pricing-header fade-in">
-            <p className="section-label">Pricing</p>
-            <h2 className="section-title" style={{ textAlign: 'center' }}>For appraisers.<br />For enterprises.</h2>
-          </div>
-          <div className="pricing-grid fade-in fade-in-delay-1">
-            {/* Pro */}
-            <div className="pricing-card">
-              <div className="pricing-plan">For professionals</div>
-              <div className="pricing-headline">Available at no charge.</div>
-              <div className="pricing-tagline">Achieve precision at scale.</div>
-              <ul className="pricing-features">
-                {[
-                  '50 AI estimations per month',
-                  'Full itemized breakdown output',
-                  'Basic market data access',
-                  'PDF export (GIA-compatible format)',
-                  'Email support',
-                ].map((f, i) => (
-                  <li key={i} className="pricing-feature">
-                    <span className="pricing-feature-check">✓</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <a href="#" className="btn btn-dark">Start for free</a>
-            </div>
-            {/* Enterprise */}
-            <div className="pricing-card featured">
-              <div className="pricing-plan">For organizations</div>
-              <div className="pricing-headline" style={{ color: '#fff' }}>Coming soon.</div>
-              <div className="pricing-tagline">Level up your entire team.</div>
-              <ul className="pricing-features">
-                {[
-                  'Unlimited AI estimations',
-                  'Full real-time market intelligence',
-                  'Batch API access (REST + GraphQL)',
-                  'Custom model fine-tuning',
-                  'SSO, RBAC & audit logs',
-                  'Dedicated account manager',
-                  'SLA with 99.9% uptime guarantee',
-                ].map((f, i) => (
-                  <li key={i} className="pricing-feature">
-                    <span className="pricing-feature-check">✓</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <a href="#" className="btn btn-gold">Notify me</a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── BLOGS ── */}
-      <section className="blogs" id="blog">
-        <div className="blogs-inner">
-          <div className="blogs-header">
-            <h2 className="section-title fade-in">Latest insights</h2>
-            <a href="#" className="btn btn-ghost fade-in">View all posts</a>
-          </div>
-          <div className="blogs-grid">
-            {[
-              {
-                tag: 'AI Research',
-                title: 'How our model achieves 99.4% accuracy on GIA-certified diamonds',
-                gradient: 'linear-gradient(135deg, #0a0a14, #111128)',
-                accent: '#2563eb',
-              },
-              {
-                tag: 'Market Data',
-                title: 'Ruby prices at 10-year high — what the data tells us',
-                gradient: 'linear-gradient(135deg, #140a0a, #281111)',
-                accent: '#dc2626',
-              },
-              {
-                tag: 'Product',
-                title: 'Introducing batch API: estimate entire lots in minutes',
-                gradient: 'linear-gradient(135deg, #0a1209, #111f0e)',
-                accent: '#D4AF37',
-              },
-            ].map((b, i) => (
-              <div key={i} className={`blog-card fade-in fade-in-delay-${i}`}>
-                <div className="blog-card-bg">
-                  <div className="blog-gem-visual" style={{ background: b.gradient, position: 'relative', overflow: 'hidden', width: '100%', height: '100%' }}>
-                    {/* Abstract gem dots */}
-                    {Array.from({ length: 30 }).map((_, j) => (
-                      <div key={j} style={{
-                        position: 'absolute',
-                        width: Math.random() * 4 + 1,
-                        height: Math.random() * 4 + 1,
-                        borderRadius: '50%',
-                        background: b.accent,
-                        opacity: Math.random() * 0.5 + 0.1,
-                        left: `${Math.random() * 100}%`,
-                        top: `${Math.random() * 100}%`,
-                      }} />
-                    ))}
-                    <GemMark size={64} />
-                  </div>
+        {/* ── FOOTER ── */}
+        <footer>
+          <div className="footer-inner">
+            <div className="footer-top">
+              <div>
+                <div className="footer-brand-logo">
+                  <GemMark size={22} />
+                  Caratsense
                 </div>
-                <div className="blog-card-overlay" />
-                <div className="blog-card-content">
-                  <div className="blog-card-tag">{b.tag}</div>
-                  <div className="blog-card-title">{b.title}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── FOOTER CTA ── */}
-      <div className="footer-cta">
-        <Starfield />
-        <div className="footer-cta-inner">
-          <div className="footer-cta-logo">Caratsense</div>
-          <h2 className="footer-cta-title">Experience liftoff</h2>
-          <p className="footer-cta-sub">
-            The most precise AI jewelry estimation platform, available today. Join professionals across 40+ countries.
-          </p>
-          <div className="footer-cta-actions">
-            <a href="#" className="btn btn-gold">Start Free Trial</a>
-            <a href="#" className="btn btn-outline-dark">Request Demo</a>
-          </div>
-        </div>
-      </div>
-
-      {/* ── FOOTER ── */}
-      <footer>
-        <div className="footer-inner">
-          <div className="footer-top">
-            <div>
-              <div className="footer-brand-logo">
-                <GemMark size={22} />
-                Caratsense
-              </div>
-              <p className="footer-brand-desc">
-                AI-powered jewelry estimation for professionals who can't afford to be wrong.
-              </p>
-              <div className="footer-socials">
-                {['𝕏', 'in', 'gh', '▷'].map((s, i) => (
-                  <a key={i} href="#" className="footer-social-link">{s}</a>
-                ))}
-              </div>
-            </div>
-            {[
-              { title: 'Product', links: ['Features', 'Pricing', 'API Docs', 'Changelog', 'Status'] },
-              { title: 'Use Cases', links: ['Appraisers', 'Auction Houses', 'Insurers', 'Retailers', 'Labs'] },
-              { title: 'Resources', links: ['Blog', 'Guides', 'Press', 'Releases', 'Brand Kit'] },
-              { title: 'Company', links: ['About', 'Careers', 'Contact', 'Privacy', 'Terms'] },
-            ].map(col => (
-              <div key={col.title}>
-                <div className="footer-col-title">{col.title}</div>
-                <ul className="footer-links">
-                  {col.links.map(l => (
-                    <li key={l}><a href="#">{l}</a></li>
+                <p className="footer-brand-desc">
+                  <strong>SEE BEYOND.</strong> Custom operational platforms, designed around how Indian businesses actually work. Everything we build is designed around your actual workflow, not configured off a generic SaaS.
+                </p>
+                <div className="footer-socials">
+                  {['𝕏', 'in', 'gh', '▷'].map((s, i) => (
+                    <a key={i} href="#" className="footer-social-link">{s}</a>
                   ))}
-                </ul>
+                </div>
               </div>
-            ))}
-          </div>
-          <div className="footer-bottom">
-            <span className="footer-copyright">© 2025 Caratsense Inc. All rights reserved.</span>
-            <div className="footer-legal">
-              <a href="#">Privacy</a>
-              <a href="#">Terms</a>
-              <a href="#">Brand Guidelines</a>
+              {[
+                { title: 'What We Build', links: ['Executive Dashboards', 'WhatsApp CRM', 'Inventory Intelligence', 'Order Bots', 'AI Chatbots'] },
+                { title: 'Company', links: ['About', 'Careers', 'Contact', 'Privacy', 'Terms'] },
+              ].map(col => (
+                <div key={col.title}>
+                  <div className="footer-col-title">{col.title}</div>
+                  <ul className="footer-links">
+                    {col.links.map(l => (
+                      <li key={l}><a href="#">{l}</a></li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <div className="footer-bottom">
+              <span className="footer-copyright">© 2025 CaratSense. All rights reserved.</span>
+              <div className="footer-legal">
+                <a href="#">Privacy</a>
+                <a href="#">Terms</a>
+                <a href="#">Brand Guidelines</a>
+              </div>
             </div>
           </div>
-        </div>
-      </footer>
+        </footer>
       </div>{/* end #page-content */}
     </>
   );
