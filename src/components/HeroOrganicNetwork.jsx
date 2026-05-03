@@ -44,7 +44,7 @@ function OrbitRing({ radius }) {
   );
 }
 
-function Planet({ data, isSelected, onClick, registerRef }) {
+function Planet({ data, isSelected, onClick, registerRef, progress }) {
   const ref = useRef();
   const randomOffset = useMemo(() => Math.random() * Math.PI * 2, []);
 
@@ -74,7 +74,7 @@ function Planet({ data, isSelected, onClick, registerRef }) {
         />
       </mesh>
       
-      <Html position={[0, data.size + 0.8, 0]} center style={{ pointerEvents: 'none', transition: 'opacity 0.3s', opacity: isSelected ? 0 : 1 }}>
+      <Html position={[0, data.size + 0.8, 0]} center style={{ pointerEvents: 'none', transition: 'opacity 0.3s', opacity: isSelected ? 0 : (progress > 0.4 ? 1 : 0) }}>
         <div style={{
           color: 'rgba(255,255,255,0.9)',
           fontSize: '12px',
@@ -152,7 +152,7 @@ function SolarSystem({ selectedId, onSelectPlanet, progress }) {
         <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={3} toneMapped={false} />
       </mesh>
       
-      <Html position={[0, 4, 0]} center style={{ pointerEvents: 'none', transition: 'opacity 0.3s', opacity: selectedId ? 0 : 1 }}>
+      <Html position={[0, 4, 0]} center style={{ pointerEvents: 'none', transition: 'opacity 0.3s', opacity: selectedId ? 0 : (progress > 0.4 ? 1 : 0) }}>
         <div style={{
           color: '#fbbf24', fontSize: '18px', fontWeight: 'bold', fontFamily: 'Inter, sans-serif',
           background: 'rgba(0,0,0,0.6)', padding: '6px 16px', borderRadius: '8px', border: '1px solid #fbbf2466',
@@ -170,6 +170,7 @@ function SolarSystem({ selectedId, onSelectPlanet, progress }) {
             isSelected={selectedId === planet.id}
             onClick={onSelectPlanet}
             registerRef={(id, ref) => { planetsRef.current[id] = ref; }}
+            progress={progress}
           />
         </group>
       ))}
