@@ -833,6 +833,71 @@ const Nav = ({ onMenuOpen }) => {
   );
 };
 
+const AboutModal = ({ isOpen, onClose }) => {
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="about-modal-overlay" onClick={onClose}>
+      <div className="about-modal-panel" onClick={e => e.stopPropagation()}>
+        <button className="about-modal-close" onClick={onClose} aria-label="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        {/* Lamp Effect */}
+        <div className="lamp-container">
+          <div className="lamp-beams">
+            <div className="lamp-beam lamp-beam--left" />
+            <div className="lamp-beam lamp-beam--right" />
+            <div className="lamp-blur-1" />
+            <div className="lamp-blur-2" />
+            <div className="lamp-glow" />
+            <div className="lamp-line" />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="about-modal-content">
+          <p className="section-label" style={{ textAlign: 'center', marginBottom: '8px' }}>Center of Intelligence</p>
+          <h2 className="section-title" style={{ textAlign: 'center', marginBottom: '48px' }}>
+            The Gravity of <span style={{ color: '#D4AF37' }}>Data Transformation</span>
+          </h2>
+
+          <div className="about-modal-cols">
+            <div className="about-modal-col">
+              <div className="about-modal-col-icon">⚡</div>
+              <h3 className="about-modal-col-title">What We Do</h3>
+              <p className="about-modal-col-text">
+                We build the center of your data universe. Our mission is to transform scattered Excel sheets,
+                legacy databases, and warehouse records into high-performance intelligence pipelines.
+                We turn raw data into the fuel that powers your business growth.
+              </p>
+            </div>
+            <div className="about-modal-divider" />
+            <div className="about-modal-col">
+              <div className="about-modal-col-icon">🌟</div>
+              <h3 className="about-modal-col-title">Who We Are</h3>
+              <p className="about-modal-col-text">
+                Caratsense is a team of operational architects and custom software engineers.
+                We believe technology should fit your workflow — not the other way around.
+                By engineering the "Sun" of your operational solar system, we provide clarity,
+                automation, and a single source of truth for Indian businesses.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MobileMenu = ({ isOpen, onClose }) => {
   const links = ['What We Build', 'Testimonials', 'Start Conversation'];
 
@@ -878,6 +943,7 @@ export default function App() {
   const [theme, setTheme] = useState('dark');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isPageLoading, setIsPageLoading] = useState(true);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
 
   useEffect(() => {
     const handleLoad = () => {
@@ -923,7 +989,8 @@ export default function App() {
       {/* Hero + all page content */}
       <div id="page-content" style={{ position: 'relative', zIndex: 1, opacity: isPageLoading ? 0 : 1, transition: 'opacity 0.5s ease' }}>
         <Nav onMenuOpen={() => setIsMenuOpen(true)} />
-        <HeroOrganicNetwork />
+        <HeroOrganicNetwork onSunClick={() => setIsAboutOpen(true)} />
+        <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
 
         {/* ── WHAT WE BUILD (INTERACTIVE EXPLORER) ── */}
         <section className="section explorer-section" id="whatwebuild">

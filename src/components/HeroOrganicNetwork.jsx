@@ -1,6 +1,6 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html, Stars } from '@react-three/drei';
+import { OrbitControls, Html, Stars, Billboard, useTexture, Line } from '@react-three/drei';
 import * as THREE from 'three';
 import { Folder, FileText, FileSpreadsheet, Database, HardDrive, Table } from 'lucide-react';
 
@@ -47,6 +47,176 @@ const PLANETS_DATA = [
   { id: 'scope', label: 'Strategic Audit', mobileLabel: 'Audit', color: '#38bdf8', distance: 19.0, speed: 0.03, size: 0.5, icon: 'notion' },
 ];
 
+function ShootingStar({ id, onComplete, type }) {
+  const ref = useRef();
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    let pos, vel;
+    const speed = 40 + Math.random() * 20;
+
+    switch (type) {
+      case 'background_fall':
+        // Meteors falling vertically behind everything
+        pos = [(Math.random() - 0.5) * 120, 50, -55];
+        vel = [(Math.random() - 0.5) * 15, -speed - 10, (Math.random() - 0.5) * 5];
+        break;
+      case 'back_to_front':
+        // Coming from deep space toward the camera
+        pos = [(Math.random() - 0.5) * 60, (Math.random() - 0.5) * 40, -70];
+        vel = [(Math.random() - 0.5) * 15, (Math.random() - 0.5) * 15, speed + 30];
+        break;
+      case 'right_to_left_cross':
+        // Crossing behind or through the solar system
+        pos = [90, Math.random() * 40 - 20, -10];
+        vel = [-speed - 25, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 5];
+        break;
+      case 'right_to_left_front':
+        // Passing in front of the planets
+        pos = [90, Math.random() * 30 - 15, 30];
+        vel = [-speed - 30, (Math.random() - 0.5) * 5, -5];
+        break;
+      default:
+        // Random fallback
+        pos = [0, 0, -1000];
+        vel = [0, 0, 0];
+    }
+    
+    setData({ pos, vel: new THREE.Vector3(...vel) });
+  }, [type]);
+
+  useFrame((_, delta) => {
+    if (!ref.current || !data) return;
+    ref.current.position.addScaledVector(data.vel, delta);
+    
+    const p = ref.current.position;
+    // Bounds check based on type (wide for crossers, deep for back-to-front)
+    if (Math.abs(p.x) > 150 || Math.abs(p.y) > 100 || p.z > 80 || p.y < -100) {
+      onComplete(id);
+    }
+  });
+
+  if (!data) return null;
+
+  return (
+    <group ref={ref} position={data.pos}>
+      <mesh>
+        <sphereGeometry args={[0.07, 6, 6]} />
+        <meshBasicMaterial color="#fff" transparent opacity={0.8} />
+      </mesh>
+      <Line 
+        points={[[0, 0, 0], [-data.vel.x * 0.08, -data.vel.y * 0.08, -data.vel.z * 0.08]]} 
+        color="white" 
+        lineWidth={0.5} 
+        transparent 
+        opacity={0.2} 
+      />
+    </group>
+  );
+}
+
+function MeteorSystem() {
+  const [meteors, setMeteors] = useState([]);
+  
+  const spawn = (type, count = 1) => {
+    const newMeteors = Array.from({ length: count }, () => ({
+      id: Math.random(),
+      type,
+      delay: Math.random() * 1000
+    }));
+    
+    newMeteors.forEach(m => {
+      setTimeout(() => {
+        setMeteors(prev => [...prev, m]);
+      }, m.delay);
+    });
+  };
+
+  const removeMeteor = (id) => {
+    setMeteors(prev => prev.filter(m => m.id !== id));
+  };
+
+  useEffect(() => {
+    let active = true;
+    const sequence = [
+      { type: 'background_fall', delay: 1500 },
+      { type: 'back_to_front', delay: 2000 },
+      { type: 'right_to_left_cross', delay: 1800 },
+      { type: 'background_fall', delay: 1200 },
+      { type: 'right_to_left_front', delay: 2500 },
+      { type: 'back_to_front', delay: 2000 },
+      { type: 'shower', delay: 5000 }
+    ];
+
+    const run = async () => {
+      let i = 0;
+      while (active) {
+        const event = sequence[i % sequence.length];
+        if (event.type === 'shower') {
+          spawn('right_to_left_cross', 6);
+        } else {
+          spawn(event.type, 1);
+        }
+        
+        await new Promise(r => setTimeout(r, event.delay));
+        i++;
+      }
+    };
+
+    run();
+    return () => { active = false; };
+  }, []);
+
+  return (
+    <>
+      {meteors.map(m => (
+        <ShootingStar 
+          key={m.id} 
+          id={m.id} 
+          onComplete={removeMeteor} 
+          type={m.type} 
+        />
+      ))}
+    </>
+  );
+}
+
+function SunLogo({ onSunClick }) {
+  const texture = useTexture('/backgroundless-logo.jpeg');
+  return (
+    <group 
+      onClick={(e) => { e.stopPropagation(); onSunClick && onSunClick(); }}
+      onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+    >
+      {/* The Glowing Sun Sphere */}
+      <mesh>
+        <sphereGeometry args={[2.8, 64, 64]} />
+        <meshStandardMaterial 
+          color="#fbbf24" 
+          emissive="#f59e0b" 
+          emissiveIntensity={4} 
+          toneMapped={false} 
+        />
+      </mesh>
+
+      {/* The Logo Billboard (Printed on front) */}
+      <Billboard follow={true}>
+        <mesh position={[0, 0, 2.85]}>
+          <planeGeometry args={[3.8, 3.8]} />
+          <meshBasicMaterial 
+            map={texture} 
+            transparent={true} 
+            depthTest={true}
+            depthWrite={false}
+            color="#fffbeb"
+          />
+        </mesh>
+      </Billboard>
+    </group>
+  );
+}
+
 function OrbitRing({ radius }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -61,12 +231,17 @@ function Planet({ data, isSelected, onClick, registerRef, visualProgressRef, isM
   const labelRef = useRef();
   const initialAngle = useMemo(() => (index / PLANETS_DATA.length) * Math.PI * 2, [index]);
 
-  useFrame((state) => {
+  const angleRef = useRef(initialAngle);
+
+  useFrame((state, delta) => {
     if (!ref.current) return;
-    const t = state.clock.getElapsedTime();
-    const currentSpeed = isSelected ? data.speed * 0.05 : data.speed;
-    ref.current.position.x = Math.cos(t * currentSpeed + initialAngle) * data.distance;
-    ref.current.position.z = Math.sin(t * currentSpeed + initialAngle) * data.distance;
+    
+    // Accumulate angle based on delta to avoid 'teleporting' when speed changes
+    const currentSpeed = isSelected ? data.speed * 0.1 : data.speed;
+    angleRef.current += delta * currentSpeed;
+    
+    ref.current.position.x = Math.cos(angleRef.current) * data.distance;
+    ref.current.position.z = Math.sin(angleRef.current) * data.distance;
     ref.current.rotation.y += isSelected ? 0.01 : 0.005;
 
     if (labelRef.current && visualProgressRef) {
@@ -118,7 +293,7 @@ function Planet({ data, isSelected, onClick, registerRef, visualProgressRef, isM
   );
 }
 
-function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef, isMobile }) {
+function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef, isMobile, onSunClick }) {
   const planetsRef = useRef({});
   const controlsRef = useRef();
   const groupRef = useRef();
@@ -144,11 +319,17 @@ function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef, isMobile }
       const targetPos = new THREE.Vector3();
       planet.getWorldPosition(targetPos);
 
-      const cameraOffset = new THREE.Vector3(2, 0.5, 3);
-      const desiredCameraPos = targetPos.clone().add(cameraOffset);
+      // Dynamic Camera Position: Calculate a point 'outside' the planet's current orbit position
+      const orbitDir = targetPos.clone().normalize();
+      if (orbitDir.length() < 0.1) orbitDir.set(1, 0, 0); // Fallback for center
+      
+      const cameraDist = 5; // Distance from planet
+      const cameraHeight = 1.5;
+      const desiredCameraPos = targetPos.clone().add(orbitDir.multiplyScalar(cameraDist));
+      desiredCameraPos.y += cameraHeight;
 
-      state.camera.position.lerp(desiredCameraPos, 0.04);
-      controls.target.lerp(targetPos, 0.04);
+      state.camera.position.lerp(desiredCameraPos, 0.05);
+      controls.target.lerp(targetPos, 0.05);
     } else {
       const defaultCameraPos = new THREE.Vector3(0, 20, 35);
       state.camera.position.lerp(defaultCameraPos, 0.03);
@@ -171,10 +352,9 @@ function SolarSystem({ selectedId, onSelectPlanet, visualProgressRef, isMobile }
       <ambientLight intensity={0.2} />
       <pointLight position={[0, 0, 0]} intensity={300} color="#ffedd5" distance={150} />
 
-      <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[2.5, 64, 64]} />
-        <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={3} toneMapped={false} />
-      </mesh>
+      <MeteorSystem />
+
+      <SunLogo onSunClick={onSunClick} />
 
       <Html position={[0, 4, 0]} center style={{ pointerEvents: 'none' }}>
         {/* <div ref={sunLabelRef} style={{
@@ -210,7 +390,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, t) => a + (b - a) * t;
 const easeInOutCubic = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-const HeroOrganicNetwork = () => {
+const HeroOrganicNetwork = ({ onSunClick }) => {
   const [selectedId, setSelectedId] = useState(null);
   const selectedPlanet = PLANETS_DATA.find(p => p.id === selectedId);
 
@@ -245,15 +425,42 @@ const HeroOrganicNetwork = () => {
     const cellW = (W - (isMobile ? 60 : 160)) / cols;
     const cellH = (H - (isMobile ? 60 : 160)) / rows;
 
+    // Precise Freeform Exclusion Zones (Relative to center)
+    const getZones = (w, h) => isMobile ? [
+      { w: 320, h: 480, y: 0 }
+    ] : [
+      { w: 180, h: 50, y: -200 }, // Badge
+      { w: 720, h: 90, y: -120 }, // Headline L1
+      { w: 600, h: 90, y: -40 },  // Headline L2
+      { w: 500, h: 90, y: 40 },   // Headline L3
+      { w: 850, h: 160, y: 160 }, // Subtitle
+      { w: 320, h: 70, y: 280 }   // Button
+    ];
+
     particlesRef.current = icons.map((icon, i) => {
       const col = i % cols;
       const row = Math.floor(i / cols);
+      // More uniform grid with reduced jitter to prevent initial clustering
+      let hX = (isMobile ? 30 : 80) + col * cellW + cellW * 0.5 + (Math.random() - 0.5) * cellW * 0.3;
+      let hY = (isMobile ? 30 : 80) + row * cellH + cellH * 0.5 + (Math.random() - 0.5) * cellH * 0.3;
+
+      // Initial Exclusion: Push out of any active zone
+      const zones = getZones(W, H);
+      zones.forEach(z => {
+        const dx = hX - W / 2;
+        const dy = hY - (H / 2 + z.y);
+        if (Math.abs(dx) < z.w / 2 && Math.abs(dy) < z.h / 2) {
+          hX = W / 2 + (dx > 0 ? z.w / 2 + 40 : -(z.w / 2 + 40));
+        }
+      });
+
       return {
-        homeX: (isMobile ? 30 : 80) + col * cellW + Math.random() * cellW,
-        homeY: (isMobile ? 30 : 80) + row * cellH + Math.random() * cellH,
-        x: 0, y: 0,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
+        homeX: hX,
+        homeY: hY,
+        x: 0,
+        y: 0,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: (Math.random() - 0.5) * 0.25,
       };
     });
   }, [isMobile]);
@@ -297,6 +504,46 @@ const HeroOrganicNetwork = () => {
         // Brownian drift
         pt.vx += (Math.random() - 0.5) * 0.05;
         pt.vy += (Math.random() - 0.5) * 0.05;
+
+        // Inter-particle Repulsion (Prevent icons from overlapping each other)
+        particlesRef.current.forEach((other, j) => {
+          if (i === j) return;
+          const dx = pt.homeX - other.homeX;
+          const dy = pt.homeY - other.homeY;
+          const distSq = dx * dx + dy * dy;
+          const minDist = 100; // Minimum distance between icons
+          if (distSq < minDist * minDist) {
+            const dist = Math.sqrt(distSq) || 1;
+            const force = (minDist - dist) * 0.002;
+            pt.vx += (dx / dist) * force;
+            pt.vy += (dy / dist) * force;
+          }
+        });
+
+        // Freeform Stepped Repulsion (Avoid precise text areas)
+        const zones = isMobile ? [
+          { w: 340, h: 500, y: 0 }
+        ] : [
+          { w: 200, h: 60, y: -200 }, // Badge
+          { w: 750, h: 100, y: -120 }, // Headline L1
+          { w: 620, h: 100, y: -40 },  // Headline L2
+          { w: 520, h: 100, y: 40 },   // Headline L3
+          { w: 880, h: 180, y: 160 },  // Subtitle
+          { w: 350, h: 90, y: 280 }    // Button
+        ];
+
+        zones.forEach(z => {
+          const zcx = cx;
+          const zcy = cy + z.y;
+          const dx = pt.homeX - zcx;
+          const dy = pt.homeY - zcy;
+          if (Math.abs(dx) < z.w / 2 && Math.abs(dy) < z.h / 2) {
+            const pushForce = 0.15;
+            pt.vx += dx > 0 ? pushForce : -pushForce;
+            pt.vy += dy > 0 ? pushForce : -pushForce;
+          }
+        });
+
         pt.vx = clamp(pt.vx * 0.97, -1.2, 1.2);
         pt.vy = clamp(pt.vy * 0.97, -1.2, 1.2);
         pt.homeX = clamp(pt.homeX + pt.vx, 40, W - 40);
@@ -341,9 +588,9 @@ const HeroOrganicNetwork = () => {
             return (
               <div key={icon + i} ref={el => iconRefs.current[i] = el} style={{ position: 'absolute', top: 0, left: 0 }}>
                 {IconComp ? (
-                  <IconComp size={32} color="white" style={{ opacity: 0.8 }} />
+                  <IconComp size={32} color="#444" style={{ opacity: 0.8 }} />
                 ) : (
-                  <img src={`${CDN}${icon}.svg`} alt="" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(1)' }} />
+                  <img src={`${CDN}${icon}.svg`} alt="" style={{ width: '32px', height: '32px', filter: 'brightness(0) invert(0.4)' }} />
                 )}
               </div>
             );
@@ -353,7 +600,7 @@ const HeroOrganicNetwork = () => {
         {/* Phase 0: Hero Copy */}
         <div ref={heroTextRef} className="hon-hero-text" style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          textAlign: 'center', zIndex: 2
+          textAlign: 'center', zIndex: 10
         }}>
           <div className="hero-badge" style={{ fontWeight: 'bold', letterSpacing: '1px' }}>
             <span className="dot" />
@@ -382,7 +629,7 @@ const HeroOrganicNetwork = () => {
           touchAction: 'pan-y' // Allow vertical scrolling on mobile
         }}>
           <Canvas camera={{ position: [0, 20, 35], fov: 45 }} style={{ touchAction: 'pan-y' }}>
-            <SolarSystem selectedId={selectedId} onSelectPlanet={setSelectedId} visualProgressRef={visualProgressRef} isMobile={isMobile} />
+            <SolarSystem selectedId={selectedId} onSelectPlanet={setSelectedId} visualProgressRef={visualProgressRef} isMobile={isMobile} onSunClick={onSunClick} />
           </Canvas>
         </div>
 
