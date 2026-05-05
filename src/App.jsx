@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import HeroOrganicNetwork from './components/HeroOrganicNetwork';
+import FeatureCarousel from './components/FeatureCarousel';
+import ZoomParallax from './components/ZoomParallax';
 import './index.css';
 
 // ── Gem SVG mark ──────────────────────────────────────────────
@@ -292,85 +294,7 @@ const NeuralNetworkCanvas = () => {
 };
 
 // ── Capability Explorer ──────────────────────────────
-const CAPABILITIES = [
-  { id: '01', title: 'Industry Operating Systems', desc: 'End-to-end platforms covering orders, inventory, billing, customers, field ops, and reporting.', icon: '🏗️', detail: 'Centralize your entire supply chain. From procurement to last-mile delivery, we build the core software that runs your business.', accent: '#4f52b8' },
-  { id: '02', title: 'AI & ML Modules', desc: 'Computer vision, predictive analytics, NLP, forecasting, and anomaly detection.', icon: '🧠', detail: 'Move beyond basic reporting. Use ML to predict demand, automate quality control via vision, and extract insights from messy data.', accent: '#8b5cf6' },
-  { id: '03', title: 'WhatsApp Business Stack', desc: 'Managed campaigns, drip flows, order capture, support bots, and payment links.', icon: '💬', detail: 'WhatsApp is the nervous system of Indian trade. We build native Meta API integrations for automated ordering and customer support.', accent: '#25d366' },
-  { id: '04', title: 'Dashboards & BI', desc: 'Live ops dashboards, sales intelligence, and owner-level KPI rollups.', icon: '📊', detail: 'Real-time visibility for owners. Stop waiting for end-of-day reports. See your margins, inventory levels, and sales trends as they happen.', accent: '#e07b39' },
-  { id: '05', title: 'Integrations', desc: 'Seamlessly connecting Tally, Zoho, payment gateways, and IoT sensors.', icon: '🔌', detail: 'No more data silos. We build bridges between your existing accounting, CRM, and hardware systems for a unified data flow.', accent: '#2ba8a0' },
-  { id: '06', title: 'Mobile Applications', desc: 'Native Android and iOS apps for field teams, distributors, and customers.', icon: '📱', detail: 'Empower your workforce. Custom apps designed for low-connectivity warehouses, field sales, and direct-to-customer ordering.', accent: '#00e5ff' },
-  { id: '07', title: 'Data Intelligence Platforms', desc: 'Unified decisioning layer for Tally, CRM, and WhatsApp data.', icon: '📉', detail: 'We turn fragmented spreadsheets into a powerful intelligence layer that flags bottlenecks before they impact your bottom line.', accent: '#ef4444' },
-  { id: '08', title: 'Scope & Audit Work', desc: 'Operational audits, bottleneck mapping, and architecture flowcharts.', icon: '📋', detail: 'Strategy before software. We audit your current workflow to identify hidden inefficiencies and map out a clear digital roadmap.', accent: '#fbbf24' },
-];
-
-const CapabilityExplorer = () => {
-  const [active, setActive] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-
-  // Auto-slide every 5 seconds
-  useEffect(() => {
-    if (isPaused) return;
-    const timer = setInterval(() => {
-      setActive(prev => (prev + 1) % CAPABILITIES.length);
-    }, 5000);
-    return () => clearInterval(timer);
-  }, [isPaused]);
-
-  return (
-    <div
-      className="explorer-slider"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-    >
-      <div className="slider-viewport">
-        <div
-          className="slider-track"
-          style={{ transform: `translateX(-${active * 100}%)` }}
-        >
-          {CAPABILITIES.map((c, i) => (
-            <div key={i} className="capability-slide">
-              <div className="slide-content">
-                <div className="slide-visual">
-                  <div className="explorer-icon-box">
-                    <span role="img" aria-label={c.title}>{c.icon}</span>
-                  </div>
-                  <div className="slide-glow-pulse" />
-                </div>
-
-                <div className="slide-info">
-                  <div className="slide-tag">Module {c.id}</div>
-                  <h3 className="slide-title">{c.title}</h3>
-                  <p className="slide-desc">{c.desc}</p>
-                  <div className="slide-divider" />
-                  <p className="slide-long">{c.detail}</p>
-
-                  <a href="#startconversation" className="btn btn-dark" style={{ width: 'fit-content' }}>
-                    Discuss Implementation
-                  </a>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Navigation Dots */}
-      <div className="slider-dots">
-        {CAPABILITIES.map((c, i) => (
-          <div key={i} className="dot-wrapper">
-            <button
-              className={`slider-dot ${active === i ? 'active' : ''}`}
-              onClick={() => setActive(i)}
-            />
-            <div className="dot-tooltip">
-              {c.title.split(' ').slice(0, 3).join(' ')}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
+// Legacy CapabilityExplorer removed in favor of FeatureCarousel
 
 // ── Mock UI Components (Interactive) ──────────────────────────
 
@@ -834,6 +758,8 @@ const Nav = ({ onMenuOpen }) => {
 };
 
 const AboutModal = ({ isOpen, onClose }) => {
+  const modalRef = useRef(null);
+
   useEffect(() => {
     if (isOpen) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
@@ -844,55 +770,60 @@ const AboutModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="about-modal-overlay" onClick={onClose}>
-      <div className="about-modal-panel" onClick={e => e.stopPropagation()}>
-        <button className="about-modal-close" onClick={onClose} aria-label="Close">
+      <div 
+        ref={modalRef}
+        className="about-modal-panel has-parallax" 
+        onClick={e => e.stopPropagation()}
+      >
+        <button className="about-modal-close" onClick={onClose} aria-label="Close" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
 
-        {/* Lamp Effect */}
-        <div className="lamp-container">
-          <div className="lamp-beams">
-            <div className="lamp-beam lamp-beam--left" />
-            <div className="lamp-beam lamp-beam--right" />
-            <div className="lamp-blur-1" />
-            <div className="lamp-blur-2" />
-            <div className="lamp-glow" />
-            <div className="lamp-line" />
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="about-modal-content">
-          <p className="section-label" style={{ textAlign: 'center', marginBottom: '8px' }}>Center of Intelligence</p>
-          <h2 className="section-title" style={{ textAlign: 'center', marginBottom: '48px' }}>
-            The Gravity of <span style={{ color: '#D4AF37' }}>Data Transformation</span>
-          </h2>
-
-          <div className="about-modal-cols">
-            <div className="about-modal-col">
-              <div className="about-modal-col-icon">⚡</div>
-              <h3 className="about-modal-col-title">What We Do</h3>
-              <p className="about-modal-col-text">
-                We build the center of your data universe. Our mission is to transform scattered Excel sheets,
-                legacy databases, and warehouse records into high-performance intelligence pipelines.
-                We turn raw data into the fuel that powers your business growth.
-              </p>
+        <ZoomParallax 
+          containerRef={modalRef}
+          subtitle="Meet the Architects"
+          title="The Gravity of Data"
+          images={[
+            { src: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200", alt: "Data Visualization" },
+            { src: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1200", alt: "Engineering" },
+            { src: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200", alt: "Collaboration" },
+            { src: "https://images.unsplash.com/photo-1551288049-bbda38a10ad5?q=80&w=1200", alt: "Analytics" },
+            { src: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=1200", alt: "Mobile Solutions" },
+            { src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200", alt: "Strategy" },
+            { src: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=1200", alt: "Innovation" },
+          ]}
+        >
+          <div className="team-section">
+            <p className="section-label" style={{ color: '#c026d3' }}>The People Behind Caratsense</p>
+            <h2 className="section-title">Meet Our Team</h2>
+            <p className="section-desc">We are a group of engineers and architects obsessed with making systems that actually work.</p>
+            
+            <div className="team-grid">
+              {[
+                { name: 'Sahil Shrivastava', role: 'Founder & Tech Lead', bio: 'Specialist in high-performance data architecture and custom ERP development. Built the core Caratsense engine.', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop' },
+                { name: 'Vinay K.', role: 'Operations Strategy', bio: 'Expert in Indian supply chain bottlenecks. Maps the operational audit into digital roadmaps.', img: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&h=200&auto=format&fit=crop' },
+                { name: 'Ananya R.', role: 'Head of AI Integration', bio: 'Leads our NLP and Computer Vision modules, integrating state-of-the-art intelligence into daily workflows.', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&h=200&auto=format&fit=crop' }
+              ].map((m, i) => (
+                <div key={i} className="team-card">
+                  <div className="team-avatar">
+                    <img src={m.img} alt={m.name} />
+                  </div>
+                  <div className="team-name">{m.name}</div>
+                  <div className="team-role">{m.role}</div>
+                  <p className="team-bio">{m.bio}</p>
+                </div>
+              ))}
             </div>
-            <div className="about-modal-divider" />
-            <div className="about-modal-col">
-              <div className="about-modal-col-icon">🌟</div>
-              <h3 className="about-modal-col-title">Who We Are</h3>
-              <p className="about-modal-col-text">
-                Caratsense is a team of operational architects and custom software engineers.
-                We believe technology should fit your workflow — not the other way around.
-                By engineering the "Sun" of your operational solar system, we provide clarity,
-                automation, and a single source of truth for Indian businesses.
-              </p>
+
+            <div style={{ marginTop: '80px', textAlign: 'center' }}>
+              <a href="#startconversation" className="btn btn-gold" onClick={onClose}>
+                Partner With Us
+              </a>
             </div>
           </div>
-        </div>
+        </ZoomParallax>
       </div>
     </div>
   );
@@ -1002,7 +933,7 @@ export default function App() {
             </div>
 
             <div className="explorer-container fade-in">
-              <CapabilityExplorer />
+              <FeatureCarousel />
             </div>
           </div>
         </section>
