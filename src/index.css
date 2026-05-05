@@ -2926,7 +2926,49 @@ body, .nav, .hero, section, footer, .pricing-card, .mock-item, .mock-stat,
   line-height: 1.4;
 }
 
-/* ── Testimonials Section ── */
+/* ── Vertical Testimonial Columns ── */
+.tvcol-wrapper {
+  display: flex;
+  gap: 24px;
+  max-height: 600px;
+  overflow: hidden;
+  padding: 40px var(--section-gutter, 60px) 0;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%);
+}
+
+.tvcol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  animation: tvcol-scroll var(--tvcol-dur, 20s) linear infinite;
+}
+
+.tvcol-set {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 24px;
+}
+
+@keyframes tvcol-scroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+@media (max-width: 768px) {
+  .tvcol-wrapper {
+    flex-direction: column;
+    max-height: 520px;
+    padding: 24px 16px 0;
+  }
+  .tvcol:nth-child(2),
+  .tvcol:nth-child(3) {
+    display: none;
+  }
+}
+
+/* ── Testimonials Grid ── */
 .bg-darker {
   background: #05050a;
 }

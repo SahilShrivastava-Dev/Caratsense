@@ -1025,7 +1025,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* ── TESTIMONIALS (MARQUEE) ── */}
+        {/* ── TESTIMONIALS (VERTICAL COLUMNS) ── */}
         <section className="section bg-darker" id="testimonials">
           <div className="section-inner">
             <div className="section-header fade-in">
@@ -1034,53 +1034,48 @@ export default function App() {
             </div>
           </div>
 
-          <div className="marquee-container testimonial-marquee fade-in" style={{ marginTop: 40 }}>
-            <div className="marquee-content marquee-content--slow">
-              {[
-                { name: 'Rajesh Khanna', role: 'Founder, Khanna Jewellery', text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM allowed us to delegate sales follow-ups without losing that personal touch.', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Priya Sharma', role: 'CEO, Urban Threads', text: 'They researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability. A game-changer.', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Anil Mehta', role: 'Director, Mehta Manufacturing', text: 'They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Sameer Joshi', role: 'Owner, Joshi Specialty Chemicals', text: 'We now have a unified decisioning layer that pulls from our factory floor and sales team chats. Incredible efficiency and clarity.', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Anjali Desai', role: 'Director, Desai Building Materials', text: 'They found bottlenecks in our supply chain we didn\'t know existed. The dashboard they built is now our most used management tool.', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Karan Malhotra', role: 'Founder, Malhotra Aviation', text: 'Caratsense built us a native field app that actually works in low-connectivity areas. Truly bespoke engineering for Indian ops.', image: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?q=80&w=120&h=120&auto=format&fit=crop' }
-              ].map((t, i) => (
-                <div key={i} className="testimonial-card testimonial-card--marquee">
-                  <div className="testimonial-header">
-                    <div className="testimonial-avatar">
-                      <img src={t.image} alt={t.name} />
-                    </div>
-                    <div className="testimonial-meta">
-                      <div className="testimonial-name">{t.name}</div>
-                      <div className="testimonial-role">{t.role}</div>
-                    </div>
+          {(() => {
+            const all = [
+              { name: 'Rajesh Khanna', role: 'Founder, Khanna Jewellery', text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM allowed us to delegate sales follow-ups without losing that personal touch.', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&h=120&auto=format&fit=crop' },
+              { name: 'Priya Sharma', role: 'CEO, Urban Threads', text: 'They researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability. A game-changer.', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=120&h=120&auto=format&fit=crop' },
+              { name: 'Anil Mehta', role: 'Director, Mehta Manufacturing', text: 'They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=120&h=120&auto=format&fit=crop' },
+              { name: 'Sameer Joshi', role: 'Owner, Joshi Specialty Chemicals', text: 'We now have a unified decisioning layer that pulls from our factory floor and sales team chats. Incredible efficiency and clarity.', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=120&h=120&auto=format&fit=crop' },
+              { name: 'Anjali Desai', role: 'Director, Desai Building Materials', text: 'They found bottlenecks in our supply chain we didn\'t know existed. The dashboard they built is now our most used management tool.', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=120&h=120&auto=format&fit=crop' },
+              { name: 'Karan Malhotra', role: 'Founder, Malhotra Aviation', text: 'Caratsense built us a native field app that actually works in low-connectivity areas. Truly bespoke engineering for Indian ops.', image: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?q=80&w=120&h=120&auto=format&fit=crop' },
+            ];
+            const cols = [
+              { items: [all[0], all[3]], speed: 18 },
+              { items: [all[1], all[4]], speed: 24 },
+              { items: [all[2], all[5]], speed: 20 },
+            ];
+            return (
+              <div className="tvcol-wrapper fade-in">
+                {cols.map((col, ci) => (
+                  <div key={ci} className="tvcol" style={{ '--tvcol-dur': `${col.speed}s` }}>
+                    {/* Duplicate cards for seamless loop */}
+                    {[0, 1].map(rep => (
+                      <div key={rep} className="tvcol-set">
+                        {col.items.map((t, ti) => (
+                          <div key={ti} className="testimonial-card">
+                            <p className="testimonial-text">"{t.text}"</p>
+                            <div className="testimonial-header" style={{ marginTop: '20px', marginBottom: 0 }}>
+                              <div className="testimonial-avatar">
+                                <img src={t.image} alt={t.name} />
+                              </div>
+                              <div className="testimonial-meta">
+                                <div className="testimonial-name">{t.name}</div>
+                                <div className="testimonial-role">{t.role}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
-                  <p className="testimonial-text">"{t.text}"</p>
-                </div>
-              ))}
-              {/* Duplicate for loop */}
-              {[
-                { name: 'Rajesh Khanna', role: 'Founder, Khanna Jewellery', text: 'Caratsense AI transformed our wholesale operations. The WhatsApp CRM allowed us to delegate sales follow-ups without losing that personal touch.', image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Priya Sharma', role: 'CEO, Urban Threads', text: 'They researched our warehouse workflow and built a system that flags slow-moving stock before it becomes a liability. A game-changer.', image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Anil Mehta', role: 'Director, Mehta Manufacturing', text: 'They integrated our machine data directly with our billing software, giving us real-time visibility into production costs we never thought possible.', image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Sameer Joshi', role: 'Owner, Joshi Specialty Chemicals', text: 'We now have a unified decisioning layer that pulls from our factory floor and sales team chats. Incredible efficiency and clarity.', image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Anjali Desai', role: 'Director, Desai Building Materials', text: 'They found bottlenecks in our supply chain we didn\'t know existed. The dashboard they built is now our most used management tool.', image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=120&h=120&auto=format&fit=crop' },
-                { name: 'Karan Malhotra', role: 'Founder, Malhotra Aviation', text: 'Caratsense built us a native field app that actually works in low-connectivity areas. Truly bespoke engineering for Indian ops.', image: 'https://images.unsplash.com/photo-1519345182560-3f2917c472ef?q=80&w=120&h=120&auto=format&fit=crop' }
-              ].map((t, i) => (
-                <div key={`dup-${i}`} className="testimonial-card testimonial-card--marquee">
-                  <div className="testimonial-header">
-                    <div className="testimonial-avatar">
-                      <img src={t.image} alt={t.name} />
-                    </div>
-                    <div className="testimonial-meta">
-                      <div className="testimonial-name">{t.name}</div>
-                      <div className="testimonial-role">{t.role}</div>
-                    </div>
-                  </div>
-                  <p className="testimonial-text">"{t.text}"</p>
-                </div>
-              ))}
-            </div>
-          </div>
+                ))}
+              </div>
+            );
+          })()}
         </section>
 
         {/* ── START CONVERSATION ── */}
