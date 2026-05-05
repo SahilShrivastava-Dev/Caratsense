@@ -1188,27 +1188,59 @@ footer {
 
 .footer-socials {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 .footer-social-link {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.1);
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  color: rgba(255,255,255,0.5);
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.55);
   text-decoration: none;
-  transition: all var(--transition);
-  font-size: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  background: rgba(255,255,255,0.04);
 }
 
 .footer-social-link:hover {
   border-color: rgba(255,255,255,0.3);
   color: #fff;
+  background: rgba(255,255,255,0.08);
 }
+
+/* The inner container holding two copies stacked vertically */
+.fslink-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.footer-social-link:hover .fslink-inner {
+  transform: translateY(-100%);
+}
+
+.fslink-top,
+.fslink-bot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fslink-text {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
 
 .footer-col-title {
   font-size: 12px;
