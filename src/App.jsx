@@ -761,9 +761,34 @@ const AboutModal = ({ isOpen, onClose }) => {
   const modalRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      // Auto-scroll logic: play the parallax animation automatically
+      const timer = setTimeout(() => {
+        if (modalRef.current) {
+          const scrollTarget = modalRef.current.scrollHeight * 0.78; // Scroll to roughly where team section starts
+          let startTime = null;
+          const duration = 5000; // 5 seconds for the journey
+
+          const step = (timestamp) => {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            // Ease out cubic
+            const ease = 1 - Math.pow(1 - progress, 3);
+            if (modalRef.current) {
+              modalRef.current.scrollTop = ease * scrollTarget;
+            }
+            if (progress < 1) {
+              window.requestAnimationFrame(step);
+            }
+          };
+          window.requestAnimationFrame(step);
+        }
+      }, 1000); // Wait for modal entry animation
+      return () => clearTimeout(timer);
+    } else {
+      document.body.style.overflow = '';
+    }
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -775,36 +800,56 @@ const AboutModal = ({ isOpen, onClose }) => {
         className="about-modal-panel has-parallax" 
         onClick={e => e.stopPropagation()}
       >
-        <button className="about-modal-close" onClick={onClose} aria-label="Close" style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
+        <button className="about-modal-close sticky-close" onClick={onClose} aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
 
-        <ZoomParallax 
+        <ZoomParallax
           containerRef={modalRef}
-          subtitle="Meet the Architects"
-          title="The Gravity of Data"
+          title="CARATSENSE"
           images={[
-            { src: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1200", alt: "Data Visualization" },
-            { src: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=1200", alt: "Engineering" },
-            { src: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=1200", alt: "Collaboration" },
-            { src: "https://images.unsplash.com/photo-1551288049-bbda38a10ad5?q=80&w=1200", alt: "Analytics" },
-            { src: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=1200", alt: "Mobile Solutions" },
-            { src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=1200", alt: "Strategy" },
-            { src: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=1200", alt: "Innovation" },
+            {
+              src: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1280&h=720&fit=crop&crop=entropy&auto=format&q=80',
+              alt: 'Modern architecture building',
+            },
+            {
+              src: 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1280&h=720&fit=crop&crop=entropy&auto=format&q=80',
+              alt: 'Urban cityscape at sunset',
+            },
+            {
+              src: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=800&h=800&fit=crop&crop=entropy&auto=format&q=80',
+              alt: 'Abstract geometric pattern',
+            },
+            {
+              src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1280&h=720&fit=crop&crop=entropy&auto=format&q=80',
+              alt: 'Mountain landscape',
+            },
+            {
+              src: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&h=800&fit=crop&crop=entropy&auto=format&q=80',
+              alt: 'Minimalist design elements',
+            },
+            {
+              src: 'https://images.unsplash.com/photo-1439066615861-d1af74d74000?w=1280&h=720&fit=crop&crop=entropy&auto=format&q=80',
+              alt: 'Ocean waves and beach',
+            },
+            {
+              src: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1280&h=720&fit=crop&crop=entropy&auto=format&q=80',
+              alt: 'Forest trees and sunlight',
+            },
           ]}
         >
           <div className="team-section">
             <p className="section-label" style={{ color: '#c026d3' }}>The People Behind Caratsense</p>
             <h2 className="section-title">Meet Our Team</h2>
             <p className="section-desc">We are a group of engineers and architects obsessed with making systems that actually work.</p>
-            
+
             <div className="team-grid">
               {[
-                { name: 'Sahil Shrivastava', role: 'Founder & Tech Lead', bio: 'Specialist in high-performance data architecture and custom ERP development. Built the core Caratsense engine.', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop' },
-                { name: 'Vinay K.', role: 'Operations Strategy', bio: 'Expert in Indian supply chain bottlenecks. Maps the operational audit into digital roadmaps.', img: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&h=200&auto=format&fit=crop' },
-                { name: 'Ananya R.', role: 'Head of AI Integration', bio: 'Leads our NLP and Computer Vision modules, integrating state-of-the-art intelligence into daily workflows.', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&h=200&auto=format&fit=crop' }
+                { name: 'Arjun Mehta', role: 'Founder & Tech Lead', bio: 'Specialist in high-performance data architecture and custom ERP development. Built the core Caratsense engine.', img: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop' },
+                { name: 'Vikram S.', role: 'Operations Strategy', bio: 'Expert in Indian supply chain bottlenecks. Maps the operational audit into digital roadmaps.', img: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=200&h=200&auto=format&fit=crop' },
+                { name: 'Priya D.', role: 'Head of AI Integration', bio: 'Leads our NLP and Computer Vision modules, integrating state-of-the-art intelligence into daily workflows.', img: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&h=200&auto=format&fit=crop' }
               ].map((m, i) => (
                 <div key={i} className="team-card">
                   <div className="team-avatar">
@@ -1085,29 +1130,29 @@ export default function App() {
                       href: 'https://twitter.com/caratsense',
                       label: 'Twitter / X',
                       icon: (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.736-8.856L2.06 2.25h6.963l4.264 5.636zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                        )
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.742l7.736-8.856L2.06 2.25h6.963l4.264 5.636zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                      )
                     },
                     {
                       href: 'https://linkedin.com/company/caratsense',
                       label: 'LinkedIn',
                       icon: (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
-                        )
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" /><circle cx="4" cy="4" r="2" /></svg>
+                      )
                     },
                     {
                       href: 'https://github.com/caratsense',
                       label: 'GitHub',
                       icon: (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-                        )
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" /></svg>
+                      )
                     },
                     {
                       href: 'https://caratsense.in',
                       label: 'Website',
                       icon: (
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
-                        )
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20" /></svg>
+                      )
                     },
                   ].map((s, i) => (
                     <a key={i} href={s.href} aria-label={s.label} target="_blank" rel="noopener noreferrer" className="footer-social-link">

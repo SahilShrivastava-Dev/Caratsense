@@ -602,10 +602,6 @@ const HeroOrganicNetwork = ({ onSunClick }) => {
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
           textAlign: 'center', zIndex: 10
         }}>
-          <div className="hero-badge" style={{ fontWeight: 'bold', letterSpacing: '1px' }}>
-            <span className="dot" />
-            SEE BEYOND
-          </div>
           <h1 className="hero-title" style={{ fontSize: isMobile ? '2.5rem' : '4rem', color: '#fff', margin: '20px 0', lineHeight: 1.1 }}>
             Transforming your<br />
             <em style={{ color: '#fbbf24', fontStyle: 'normal' }}>raw data into</em><br />
@@ -644,10 +640,6 @@ const HeroOrganicNetwork = ({ onSunClick }) => {
             opacity: 0, transition: 'opacity 0.5s',
             maxWidth: '600px', marginTop: '10vh', marginLeft: '5vw'
           }}>
-            <div className="hero-badge" style={{ fontWeight: 'bold', letterSpacing: '1px', marginBottom: '1rem', display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: '20px', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
-              <span style={{ width: '8px', height: '8px', background: '#fbbf24', borderRadius: '50%', marginRight: '8px' }} />
-              EXPLORE
-            </div>
             <h1 style={{ fontSize: isMobile ? '2.5rem' : '4rem', color: '#fff', margin: 0, lineHeight: 1.1, fontFamily: 'Inter, sans-serif' }}>
               We build <br /><span style={{ color: '#fbbf24' }}>Data Intelligence</span>
             </h1>

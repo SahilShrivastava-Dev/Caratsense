@@ -215,9 +215,6 @@ export function FeatureCarousel() {
                         exit={{ opacity: 0, y: 20 }}
                         className="fc-card-overlay"
                       >
-                        <div className="fc-card-tag">
-                          {feature.id} • {feature.label}
-                        </div>
                         <p className="fc-card-desc">
                           {feature.description}
                         </p>
@@ -225,12 +222,6 @@ export function FeatureCarousel() {
                     )}
                   </AnimatePresence>
 
-                  <div className={`fc-card-badge ${isActive ? 'active' : ''}`}>
-                    <div className="fc-badge-dot" />
-                    <span className="fc-badge-text">
-                      Live Module
-                    </span>
-                  </div>
                 </motion.div>
               );
             })}

@@ -6,17 +6,17 @@ export function ZoomParallax({ images, title, subtitle, children, containerRef }
   
 	const { scrollYProgress } = useScroll({
 		target: container,
-    container: containerRef, // This is crucial for scrolling inside a modal
+    container: containerRef,
 		offset: ['start start', 'end end'],
 	});
 
-	// Outer images scale and drift
-	const scaleOut = useTransform(scrollYProgress, [0, 0.8], [1, 15]);
-	const opacityOut = useTransform(scrollYProgress, [0.4, 0.8], [1, 0]);
-  
-  // Center image (index 0) scales to "enter"
-  const scaleCenter = useTransform(scrollYProgress, [0, 1], [1, 4]);
-  const opacityCenter = useTransform(scrollYProgress, [0.85, 1], [1, 0]);
+	const scale4 = useTransform(scrollYProgress, [0, 1], [1, 4]);
+	const scale5 = useTransform(scrollYProgress, [0, 1], [1, 5]);
+	const scale6 = useTransform(scrollYProgress, [0, 1], [1, 6]);
+	const scale8 = useTransform(scrollYProgress, [0, 1], [1, 8]);
+	const scale9 = useTransform(scrollYProgress, [0, 1], [1, 9]);
+
+	const scales = [scale4, scale5, scale6, scale5, scale6, scale8, scale9];
 
   // Title fade out
   const titleOpacity = useTransform(scrollYProgress, [0, 0.15], [1, 0]);
@@ -31,25 +31,22 @@ export function ZoomParallax({ images, title, subtitle, children, containerRef }
             className="zp-overlay"
             style={{ opacity: titleOpacity, scale: titleScale, zIndex: 100 }}
           >
-            {subtitle && <p className="section-label" style={{ color: '#c026d3' }}>{subtitle}</p>}
-            {title && <h2 className="section-title">{title}</h2>}
+            {title && <h1 className="section-title" style={{ fontSize: '3rem', fontWeight: 'bold' }}>{title}</h1>}
             <div className="zp-mouse-hint">
               <div className="mouse-icon">
                 <div className="mouse-wheel" />
               </div>
-              <span>Scroll to Enter</span>
+              <span>Scroll to Explore</span>
             </div>
           </motion.div>
 
           {images.map(({ src, alt }, index) => {
-            const isCenter = index === 0;
-            const scale = isCenter ? scaleCenter : scaleOut;
-            const opacity = isCenter ? opacityCenter : opacityOut;
+            const scale = scales[index % scales.length];
 
             return (
               <motion.div
                 key={index}
-                style={{ scale, opacity }}
+                style={{ scale }}
                 className={`zp-item zp-item-${index}`}
               >
                 <div className="zp-image-wrapper">
@@ -58,7 +55,6 @@ export function ZoomParallax({ images, title, subtitle, children, containerRef }
                     alt={alt || `Parallax image ${index + 1}`}
                     className="zp-image"
                   />
-                  {isCenter && <div className="zp-portal-glow" />}
                 </div>
               </motion.div>
             );
